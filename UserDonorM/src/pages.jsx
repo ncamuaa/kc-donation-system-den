@@ -75,7 +75,7 @@ const TESTIMONIALS = [
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 
 export function formatCurrency(amount) {
-  return `₱${amount.toLocaleString('en-PH')}`
+  return `₱${Number(amount || 0).toLocaleString('en-PH')}`
 }
 
 export function daysLeft(endDate) {
@@ -283,18 +283,27 @@ export function HomeFeaturedCampaigns({ onDonate }) {
   )
 }
 
-export function ImpactStats({ stats }) {
-  const funds = useAnimatedCounter(stats.totalFunds, 900)
-  const donors = useAnimatedCounter(stats.totalDonors, 1000)
-  const active = useAnimatedCounter(stats.activeCampaigns, 800)
-  const beneficiaries = useAnimatedCounter(stats.beneficiaries, 1100)
+export function ImpactStats() {
+  // ✅ Pull live data from DataContext instead of hardcoded values
+  const { donations, donors, campaigns } = useData()
+  const totalFunds = donations
+    .filter(d => d.status === 'Completed')
+    .reduce((sum, d) => sum + Number(d.amount || 0), 0)
+  const totalDonors = donors.length || donations.length
+  const activeCampaigns = campaigns.filter(c => c.status === 'Active').length
+
+  const funds = useAnimatedCounter(totalFunds, 900)
+  const donorsCount = useAnimatedCounter(totalDonors, 1000)
+  const active = useAnimatedCounter(activeCampaigns, 800)
+  const beneficiaries = useAnimatedCounter(3200, 1100)
+
   return (
     <section className="py-6">
       <h2 className="text-sm font-semibold text-gray-900 mb-4">Impact Statistics</h2>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
           { label: 'Total Funds Raised', value: formatCurrency(funds) },
-          { label: 'Total Donors', value: donors },
+          { label: 'Total Donors', value: donorsCount },
           { label: 'Active Campaigns', value: active },
           { label: 'Beneficiaries Helped', value: beneficiaries },
         ].map((stat) => (
@@ -347,10 +356,13 @@ export function TestimonialsSection() {
   )
 }
 
-export function DonorHistorySection({ donations }) {
-  const recent = [...donations].slice(-5).reverse()
-  const total = donations.reduce((sum, d) => sum + d.amount, 0)
+export function DonorHistorySection() {
+  // ✅ Pull live donations from DataContext — backend shape: { donor, campaign, amount, date, id }
+  const { donations } = useData()
+  const recent = [...donations].slice(0, 5)
+  const total = donations.reduce((sum, d) => sum + Number(d.amount || 0), 0)
   const average = donations.length ? Math.round(total / donations.length) : 0
+
   return (
     <section className="py-6">
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(260px,1fr)] gap-4">
@@ -370,11 +382,14 @@ export function DonorHistorySection({ donations }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {recent.length === 0 && <tr><td colSpan={4} className="px-4 py-4 text-center text-gray-500">No donations yet.</td></tr>}
+                {recent.length === 0 && (
+                  <tr><td colSpan={4} className="px-4 py-4 text-center text-gray-500">No donations yet.</td></tr>
+                )}
                 {recent.map((d) => (
-                  <tr key={d.reference}>
-                    <td className="px-4 py-2 whitespace-nowrap text-gray-700">{d.anonymous ? 'Anonymous donor' : d.name}</td>
-                    <td className="px-4 py-2 whitespace-nowrap text-gray-700">{d.campaignTitle}</td>
+                  <tr key={d.id}>
+                    {/* ✅ Use backend field names: donor, campaign, amount, date */}
+                    <td className="px-4 py-2 whitespace-nowrap text-gray-700">{d.donor}</td>
+                    <td className="px-4 py-2 whitespace-nowrap text-gray-700">{d.campaign}</td>
                     <td className="px-4 py-2 whitespace-nowrap text-right text-gray-900 font-semibold">{formatCurrency(d.amount)}</td>
                     <td className="px-4 py-2 whitespace-nowrap text-gray-700">{d.date}</td>
                   </tr>
@@ -409,18 +424,16 @@ export function AboutKnowledgeChannelSection() {
   )
 }
 
-export function HomePage({ onDonate, onViewCampaigns, donations }) {
-  const totalFunds = CAMPAIGNS.reduce((sum, c) => sum + c.raised, 0)
-  const activeCampaigns = CAMPAIGNS.filter((c) => c.status === 'Active').length
-  const stats = { totalFunds, totalDonors: 124, activeCampaigns, beneficiaries: 3200 }
+export function HomePage({ onDonate, onViewCampaigns }) {
+  // ✅ No longer needs donations or stats props — components pull from DataContext directly
   return (
     <div className="w-full pb-10">
       <HeroSection onDonate={onDonate} onViewCampaigns={onViewCampaigns} />
       <HomeFeaturedCampaigns onDonate={onDonate} />
-      <ImpactStats stats={stats} />
+      <ImpactStats />
       <WhyDonateSection />
       <TestimonialsSection />
-      <DonorHistorySection donations={donations} />
+      <DonorHistorySection />
       <AboutKnowledgeChannelSection />
     </div>
   )
@@ -739,12 +752,17 @@ export function ThankYouPage({ donation, onBackHome, onViewCampaign }) {
   )
 }
 
-export function DashboardPage({ donations }) {
-  const totalDonated = donations.reduce((sum, d) => sum + d.amount, 0)
-  const recurring = donations.filter((d) => d.type.startsWith('Monthly')).length
+export function DashboardPage() {
+  // ✅ Pull live donations from DataContext — no more stale local prop
+  const { donations, user } = useData()
+  const totalDonated = donations.reduce((sum, d) => sum + Number(d.amount || 0), 0)
+  const recurring = donations.filter((d) => d.type === 'Recurring').length
+  const average = donations.length ? Math.round(totalDonated / donations.length) : 0
+
   return (
     <div className="py-8">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">My Dashboard</h1>
+      <h1 className="text-2xl font-bold text-gray-900 mb-1">My Dashboard</h1>
+      {user?.name && <p className="text-sm text-gray-500 mb-6">Welcome back, <span className="font-medium text-gray-700">{user.name}</span>!</p>}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         {[
           { label: 'Total donated', value: formatCurrency(totalDonated) },
@@ -757,34 +775,48 @@ export function DashboardPage({ donations }) {
           </div>
         ))}
       </div>
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-        <div className="px-4 py-3 border-b border-gray-200">
-          <p className="text-sm font-semibold text-gray-900">Donation history</p>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 text-xs">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-2 text-left font-medium text-gray-500">Date</th>
-                <th className="px-4 py-2 text-left font-medium text-gray-500">Campaign</th>
-                <th className="px-4 py-2 text-right font-medium text-gray-500">Amount</th>
-                <th className="px-4 py-2 text-left font-medium text-gray-500">Type</th>
-                <th className="px-4 py-2 text-left font-medium text-gray-500">Reference</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {donations.length === 0 && <tr><td colSpan={5} className="px-4 py-4 text-center text-gray-500">No donations yet.</td></tr>}
-              {donations.map((d) => (
-                <tr key={d.reference}>
-                  <td className="px-4 py-2 whitespace-nowrap text-gray-700">{d.date}</td>
-                  <td className="px-4 py-2 whitespace-nowrap text-gray-700">{d.campaignTitle}</td>
-                  <td className="px-4 py-2 whitespace-nowrap text-right text-gray-900 font-semibold">{formatCurrency(d.amount)}</td>
-                  <td className="px-4 py-2 whitespace-nowrap text-gray-700">{d.type}</td>
-                  <td className="px-4 py-2 whitespace-nowrap text-gray-700 font-mono">{d.reference}</td>
+
+      {/* Donor Insights */}
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(260px,1fr)] gap-4 mb-6">
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+            <p className="text-sm font-semibold text-gray-900">Donor history</p>
+            <span className="text-[11px] text-gray-500">{donations.length} donation{donations.length !== 1 ? 's' : ''}</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200 text-xs">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-2 text-left font-medium text-gray-500">Donor</th>
+                  <th className="px-4 py-2 text-left font-medium text-gray-500">Campaign</th>
+                  <th className="px-4 py-2 text-right font-medium text-gray-500">Amount</th>
+                  <th className="px-4 py-2 text-left font-medium text-gray-500">Date</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {donations.length === 0 && (
+                  <tr><td colSpan={4} className="px-4 py-4 text-center text-gray-500">No donations yet.</td></tr>
+                )}
+                {donations.map((d) => (
+                  <tr key={d.id}>
+                    <td className="px-4 py-2 whitespace-nowrap text-gray-700">{d.donor}</td>
+                    <td className="px-4 py-2 whitespace-nowrap text-gray-700">{d.campaign}</td>
+                    <td className="px-4 py-2 whitespace-nowrap text-right text-gray-900 font-semibold">{formatCurrency(d.amount)}</td>
+                    <td className="px-4 py-2 whitespace-nowrap text-gray-700">{d.date}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-4 text-xs">
+          <h3 className="text-sm font-semibold text-gray-900 mb-3">Donor insights</h3>
+          <dl className="space-y-3">
+            <div className="flex justify-between"><dt className="text-gray-500">Total donated</dt><dd className="font-semibold">{formatCurrency(totalDonated)}</dd></div>
+            <div className="flex justify-between"><dt className="text-gray-500">Number of gifts</dt><dd className="font-semibold">{donations.length}</dd></div>
+            <div className="flex justify-between"><dt className="text-gray-500">Average gift</dt><dd className="font-semibold">{formatCurrency(average)}</dd></div>
+          </dl>
         </div>
       </div>
     </div>

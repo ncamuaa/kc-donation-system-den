@@ -9,12 +9,11 @@ import {
 } from './pages'
 
 export default function App() {
-  const { logout, user, isAuthenticated } = useData()
+  const { logout, user, isAuthenticated, addDonation, donations } = useData()
   const [activePage, setActivePage] = useState('home')
   const [isLoggedIn, setIsLoggedIn] = useState(isAuthenticated)
   const [userName, setUserName] = useState(user?.name || '')
   const [selectedCampaignId, setSelectedCampaignId] = useState(null)
-  const [donations, setDonations] = useState([])
   const [lastDonation, setLastDonation] = useState(null)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
 
@@ -48,41 +47,29 @@ export default function App() {
     setActivePage('campaign-details')
   }
 
-const handleDonationSubmit = async (donation) => {
-  const payload = {
-    donor: donation.name,
-    amount: donation.amount,
-    type: donation.type === 'Monthly (Recurring)' ? 'Recurring' : 'One-time',
-    campaign: donation.campaignTitle,
-    channel: donation.method,
-    status: 'Pending',
-    notes: donation.message || '',
-  };
-
-  try {
-    const res = await fetch('http://localhost:5001/api/donations', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${localStorage.getItem('token')}`,
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (res.ok) {
-      const saved = await res.json();
-      setLastDonation({ ...donation, id: saved.id });
-    } else {
-      setLastDonation(donation);
+  const handleDonationSubmit = async (donation) => {
+    const payload = {
+      donor: donation.name,
+      amount: donation.amount,
+      type: donation.type === 'Monthly (Recurring)' ? 'Recurring' : 'One-time',
+      campaign: donation.campaignTitle,
+      channel: donation.method,
+      notes: donation.message || '',
     }
-  } catch (err) {
-    console.error('Donation submit error:', err);
-    setLastDonation(donation);
+
+    // ✅ Use addDonation from DataContext so donations update in My Dashboard
+    const saved = await addDonation(payload)
+
+    if (saved) {
+      setLastDonation({ ...donation, id: saved.id })
+    } else {
+      setLastDonation(donation)
+    }
+
+    setSelectedCampaignId(donation.campaignId)
+    setActivePage('thank-you')
   }
 
-  setSelectedCampaignId(donation.campaignId);
-  setActivePage('thank-you');
-};
   return (
     <div className="min-h-screen bg-white text-gray-900 flex">
       <SideNav
@@ -98,16 +85,16 @@ const handleDonationSubmit = async (donation) => {
           onToggleSidebar={() => setIsSidebarCollapsed((prev) => !prev)}
         />
         <main className="flex-1 w-full p-8 overflow-y-auto">
-          {activePage === 'home' && <HomePage onDonate={handleDonateStart} onViewCampaigns={() => setActivePage('campaigns')} donations={donations} />}
-          {activePage === 'campaigns' && <CampaignsPage onViewDetails={handleViewDetails} onDonate={handleDonateStart} />}
-          {activePage === 'campaign-details' && <CampaignDetailsPage campaign={selectedCampaign} recentDonations={recentDonationsForSelected} onDonate={handleDonateStart} />}
-          {activePage === 'donate' && <DonationPage campaigns={CAMPAIGNS} selectedCampaignId={selectedCampaignId} onSubmit={handleDonationSubmit} onBackToCampaign={() => setActivePage('campaign-details')} />}
-          {activePage === 'thank-you' && <ThankYouPage donation={lastDonation} onBackHome={() => setActivePage('home')} onViewCampaign={() => setActivePage('campaign-details')} />}
-          {activePage === 'dashboard' && <DashboardPage donations={donations} />}
-          {activePage === 'transparency' && <TransparencyPage />}
-          {activePage === 'contact' && <ContactPage />}
-          {activePage === 'about' && <AboutPage />}
-          {activePage === 'login' && <LoginPage onLoginSuccess={handleLoginSuccess} />}
+          {activePage === 'home'            && <HomePage onDonate={handleDonateStart} onViewCampaigns={() => setActivePage('campaigns')} donations={donations} />}
+          {activePage === 'campaigns'       && <CampaignsPage onViewDetails={handleViewDetails} onDonate={handleDonateStart} />}
+          {activePage === 'campaign-details'&& <CampaignDetailsPage campaign={selectedCampaign} recentDonations={recentDonationsForSelected} onDonate={handleDonateStart} />}
+          {activePage === 'donate'          && <DonationPage campaigns={CAMPAIGNS} selectedCampaignId={selectedCampaignId} onSubmit={handleDonationSubmit} onBackToCampaign={() => setActivePage('campaign-details')} />}
+          {activePage === 'thank-you'       && <ThankYouPage donation={lastDonation} onBackHome={() => setActivePage('home')} onViewCampaign={() => setActivePage('campaign-details')} />}
+          {activePage === 'dashboard'       && <DashboardPage donations={donations} />}
+          {activePage === 'transparency'    && <TransparencyPage />}
+          {activePage === 'contact'         && <ContactPage />}
+          {activePage === 'about'           && <AboutPage />}
+          {activePage === 'login'           && <LoginPage onLoginSuccess={handleLoginSuccess} />}
         </main>
         <footer className="border-t border-gray-200 py-4 text-center text-[11px] text-gray-500">
           © {new Date().getFullYear()} Knowledge Channel Foundation · For demo purposes only

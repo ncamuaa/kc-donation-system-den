@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useMemo, useState, useEffect } from 'react';
+import React, { createContext, useContext, useMemo, useState, useEffect, useCallback } from 'react';
 
 const DataContext = createContext(null);
 
@@ -27,27 +27,30 @@ export function DataProvider({ children }) {
   const [authError, setAuthError] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
 
-  // ─── FETCH DONATIONS (only if logged in) ─────────────────────────────────
-  useEffect(() => {
-    if (!token || !user) {
+  // ─── FETCH DONATIONS ──────────────────────────────────────────────────────
+  // Extracted as a standalone function so it can be called after addDonation too
+  const fetchDonations = useCallback(async (currentToken, currentUser) => {
+    if (!currentToken || !currentUser) {
       setDonations([]);
       return;
     }
-    const fetchDonations = async () => {
-      try {
-        const endpoint = user.role === 'admin'
-          ? `${API_URL}/api/donations`
-          : `${API_URL}/api/donations/mine`;
-        const res = await fetch(endpoint, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (res.ok) setDonations(await res.json());
-      } catch (err) {
-        console.error('Failed to fetch donations:', err);
-      }
-    };
-    fetchDonations();
-  }, [token, user]);
+    try {
+      const endpoint = currentUser.role === 'admin'
+        ? `${API_URL}/api/donations`
+        : `${API_URL}/api/donations/mine`;
+      const res = await fetch(endpoint, {
+        headers: { Authorization: `Bearer ${currentToken}` },
+      });
+      if (res.ok) setDonations(await res.json());
+    } catch (err) {
+      console.error('Failed to fetch donations:', err);
+    }
+  }, []);
+
+  // Initial fetch on login
+  useEffect(() => {
+    fetchDonations(token, user);
+  }, [token, user, fetchDonations]);
 
   const value = useMemo(() => {
 
@@ -146,7 +149,6 @@ export function DataProvider({ children }) {
 
     const addDonation = async (donation) => {
       try {
-        // send token if logged in, otherwise donate anonymously
         const headers = { 'Content-Type': 'application/json' };
         if (token) headers.Authorization = `Bearer ${token}`;
 
@@ -156,7 +158,12 @@ export function DataProvider({ children }) {
           body: JSON.stringify(donation),
         });
         const data = await res.json();
-        if (res.ok) setDonations((prev) => [data, ...prev]);
+
+        if (res.ok) {
+          // ✅ Re-fetch so My Dashboard shows the new donation immediately
+          await fetchDonations(token, user);
+        }
+
         return res.ok ? data : null;
       } catch (err) {
         console.error('Add donation error:', err);
@@ -218,7 +225,7 @@ export function DataProvider({ children }) {
       updateDonation,
       deleteDonation,
     };
-  }, [user, token, authError, authLoading, donors, campaigns, donations]);
+  }, [user, token, authError, authLoading, donors, campaigns, donations, fetchDonations]);
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 }
