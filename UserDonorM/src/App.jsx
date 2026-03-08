@@ -85,7 +85,7 @@ export default function App() {
       amount: donation.amount,
       type: donation.type === 'Monthly (Recurring)' ? 'Recurring' : 'One-time',
       campaign: donation.campaignTitle,
-      campaignId: donation.campaignId,   // ← ensures backend resolves correct title
+      campaignId: donation.campaignId,   
       channel: donation.method,
       notes: donation.message || '',
     }

@@ -79,12 +79,12 @@ export function Campaigns() {
   ];
 
   const handleEditEvent = (event) => {
-    // Logic for editing event
+   
     alert(`Editing event: ${event.title}`);
   };
 
   const handleEditGrant = (grant) => {
-    // Logic for editing grant
+ 
     alert(`Editing grant: ${grant.title}`);
   };
 

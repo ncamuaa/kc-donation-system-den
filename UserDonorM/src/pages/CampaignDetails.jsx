@@ -32,7 +32,7 @@ const donationTrend = [
 export function CampaignDetails() {
   const { id } = useParams();
   
-  // Placeholder for using the ID
+
   React.useEffect(() => {
     console.log('Campaign ID:', id);
   }, [id]);

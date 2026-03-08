@@ -22,7 +22,7 @@ export function Login() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
 
-        {/* Header */}
+        
         <div className="text-center">
           <div className="mx-auto h-12 w-12 bg-primary-600 rounded-md flex items-center justify-center text-white font-bold text-xl">
             KC
@@ -38,7 +38,7 @@ export function Login() {
           </p>
         </div>
 
-        {/* Form */}
+       
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md shadow-sm -space-y-px">
             <Input
@@ -63,12 +63,12 @@ export function Login() {
             />
           </div>
 
-          {/* Error */}
+          
           {authError && (
             <p className="text-sm text-red-600 text-center">{authError}</p>
           )}
 
-          {/* Remember me + Forgot */}
+        
           <div className="flex items-center justify-between">
             <label className="flex items-center gap-2 text-sm text-gray-900">
               <input
@@ -82,7 +82,7 @@ export function Login() {
             </a>
           </div>
 
-          {/* Submit */}
+        
           <Button type="submit" className="w-full" disabled={authLoading}>
             {authLoading ? 'Signing in...' : 'Sign in'}
           </Button>

@@ -104,12 +104,12 @@ export function Donations() {
           <p className="text-sm text-gray-500">Monitor and manage incoming donations.</p>
         </div>
         <div className="flex items-center gap-2">
-          {/* Notifications — visible to all */}
+          
           <Button variant="secondary" onClick={() => setIsNotificationOpen(true)}>
             <Bell className="h-4 w-4 mr-2" />
             {overduePending.length > 0 ? `${overduePending.length} Pending Alerts` : 'Notifications'}
           </Button>
-          {/* Add Donation — admin only */}
+          
           {isAdmin && (
             <Button onClick={() => { setCurrentDonation(null); setIsModalOpen(true); }}>
               <Plus className="h-4 w-4 mr-2" />
@@ -195,7 +195,7 @@ export function Donations() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Channel</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  {/* Actions column — admin only */}
+                
                   {isAdmin && (
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                   )}
@@ -228,7 +228,7 @@ export function Donations() {
                           {donation.status}
                         </Badge>
                       </td>
-                      {/* Edit/Delete — admin only */}
+                     
                       {isAdmin && (
                         <td className="px-6 py-4 whitespace-nowrap text-right">
                           <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -271,7 +271,7 @@ export function Donations() {
         </CardContent>
       </Card>
 
-      {/* Add/Edit Modal — admin only */}
+     
       {isAdmin && (
         <Modal
           isOpen={isModalOpen}
@@ -368,7 +368,7 @@ export function Donations() {
         </Modal>
       )}
 
-      {/* Receipt Modal — visible to all */}
+   
       <Modal
         isOpen={isReceiptOpen}
         onClose={() => setIsReceiptOpen(false)}
@@ -399,7 +399,7 @@ export function Donations() {
         )}
       </Modal>
 
-      {/* Notifications Modal — visible to all */}
+      
       <Modal
         isOpen={isNotificationOpen}
         onClose={() => setIsNotificationOpen(false)}

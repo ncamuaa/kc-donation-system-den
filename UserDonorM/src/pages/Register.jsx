@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { useNavigate, Link } from 'react-router-dom';
-import { useData } from '../context/DataContext'; // adjust path if needed
+import { useData } from '../context/DataContext'; 
 
 export function Register() {
   const { register, authError, authLoading } = useData();
@@ -36,7 +36,7 @@ export function Register() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
 
-        {/* Header */}
+        
         <div className="text-center">
           <div className="mx-auto h-12 w-12 bg-primary-600 rounded-md flex items-center justify-center text-white font-bold text-xl">
             KC
@@ -52,7 +52,7 @@ export function Register() {
           </p>
         </div>
 
-        {/* Form */}
+        
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md shadow-sm -space-y-px">
             <Input
@@ -97,12 +97,12 @@ export function Register() {
             />
           </div>
 
-          {/* Error */}
+          
           {error && (
             <p className="text-sm text-red-600 text-center">{error}</p>
           )}
 
-          {/* Submit */}
+          
           <Button type="submit" className="w-full" disabled={authLoading}>
             {authLoading ? 'Creating account...' : 'Create account'}
           </Button>

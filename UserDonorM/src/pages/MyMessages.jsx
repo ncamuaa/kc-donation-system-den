@@ -19,7 +19,7 @@ export function MyMessages() {
   const [sending, setSending] = useState(false);
   const [sendStatus, setSendStatus] = useState(null);
 
-  // Chat reply state
+ 
   const [replyText, setReplyText] = useState('');
   const [replying, setReplying] = useState(false);
   const chatBottomRef = useRef(null);
@@ -33,7 +33,7 @@ export function MyMessages() {
       if (res.ok) {
         const data = await res.json();
         setMessages(data);
-        // Keep selected message in sync with latest replies
+       
         if (selectedMessage) {
           const updated = data.find((m) => m.id === selectedMessage.id);
           if (updated) setSelectedMessage(updated);
@@ -52,7 +52,7 @@ export function MyMessages() {
     return () => clearInterval(interval);
   }, [token]);
 
-  // Scroll to bottom of chat when replies update
+ 
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [selectedMessage?.replies?.length]);
@@ -135,7 +135,7 @@ export function MyMessages() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 p-6">
-      {/* Header */}
+    
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">My Messages</h1>
@@ -148,7 +148,7 @@ export function MyMessages() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-4" style={{ minHeight: '520px' }}>
-        {/* Left: message list */}
+     
         <Card className="flex flex-col overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50">
             <span className="text-xs font-semibold text-gray-500 uppercase">Inbox</span>
@@ -204,10 +204,10 @@ export function MyMessages() {
           </div>
         </Card>
 
-        {/* Right: detail or compose */}
+        
         <Card className="flex flex-col overflow-hidden">
 
-          {/* Compose */}
+        
           {showCompose && (
             <div className="flex flex-col h-full">
               <div className="px-6 py-4 border-b flex-shrink-0">
@@ -262,10 +262,10 @@ export function MyMessages() {
             </div>
           )}
 
-          {/* Message detail — chat view */}
+         
           {!showCompose && selectedMessage && (
             <div className="flex flex-col h-full overflow-hidden">
-              {/* Thread header */}
+           
               <div className="px-6 py-4 border-b flex-shrink-0">
                 <h2 className="text-base font-semibold text-gray-900">
                   {selectedMessage.subject || '(no subject)'}
@@ -285,9 +285,9 @@ export function MyMessages() {
                 </div>
               </div>
 
-              {/* Chat messages */}
+              
               <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
-                {/* Original message — user bubble (right) */}
+               
                 <div className="flex justify-end">
                   <div className="max-w-[75%]">
                     <p className="text-[10px] text-gray-400 text-right mb-1">
@@ -299,7 +299,7 @@ export function MyMessages() {
                   </div>
                 </div>
 
-                {/* Replies */}
+              
                 {selectedMessage.replies?.map((r) => {
                   const isUser = r.sender === 'user';
                   return (
@@ -320,7 +320,7 @@ export function MyMessages() {
                   );
                 })}
 
-                {/* Waiting state */}
+              
                 {selectedMessage.replies?.length === 0 && (
                   <div className="flex flex-col items-center justify-center py-8 text-gray-400 gap-2">
                     <Clock className="h-6 w-6" />
@@ -331,7 +331,7 @@ export function MyMessages() {
                 <div ref={chatBottomRef} />
               </div>
 
-              {/* Reply input */}
+              
               <div className="px-6 py-4 border-t bg-gray-50 flex-shrink-0">
                 <div className="flex items-center gap-2">
                   <input
@@ -354,7 +354,7 @@ export function MyMessages() {
             </div>
           )}
 
-          {/* Empty state */}
+          
           {!showCompose && !selectedMessage && (
             <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-3">
               <Mail className="h-10 w-10" />

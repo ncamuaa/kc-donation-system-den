@@ -20,7 +20,7 @@ export function DataProvider({ children }) {
   const [publicStats, setPublicStats] = useState([]);
   const [donorCount, setDonorCount] = useState(0);
 
-  // ─── AUTH STATE ───────────────────────────────────────────────────────────
+  
   const [user, setUser] = useState(() => {
     try { return JSON.parse(localStorage.getItem('user')) ?? null; }
     catch { return null; }
@@ -29,14 +29,14 @@ export function DataProvider({ children }) {
   const [authError, setAuthError] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
 
-  // ─── FETCH PUBLIC STATS (no auth needed) ─────────────────────────────────
+
   const fetchPublicStats = useCallback(async () => {
     try {
       const res = await fetch(`${API_URL}/api/donations/public/stats`);
       if (res.ok) {
         const data = await res.json();
         setPublicStats(data);
-        // Total donor count = sum of all donation counts across campaigns
+        
         const total = data.reduce((sum, s) => sum + Number(s.count || 0), 0);
         setDonorCount(total);
       }
@@ -49,7 +49,7 @@ export function DataProvider({ children }) {
     fetchPublicStats();
   }, [fetchPublicStats]);
 
-  // ─── FETCH CAMPAIGNS FROM BACKEND ─────────────────────────────────────────
+
   const fetchCampaigns = useCallback(async () => {
     try {
       const res = await fetch(`${API_URL}/api/campaigns`);
@@ -66,7 +66,7 @@ export function DataProvider({ children }) {
     fetchCampaigns();
   }, [fetchCampaigns]);
 
-  // ─── FETCH DONORS FROM BACKEND (admin only) ───────────────────────────────
+  
   const fetchDonors = useCallback(async (currentToken, currentUser) => {
     if (!currentToken || !currentUser || currentUser.role !== 'admin') return;
     try {
@@ -79,7 +79,7 @@ export function DataProvider({ children }) {
     }
   }, []);
 
-  // ─── FETCH DONATIONS ──────────────────────────────────────────────────────
+  
   const fetchDonations = useCallback(async (currentToken, currentUser) => {
     if (!currentToken || !currentUser) {
       setDonations([]);
@@ -105,7 +105,7 @@ export function DataProvider({ children }) {
 
   const value = useMemo(() => {
 
-    // ─── AUTH ───────────────────────────────────────────────────────────────
+  
 
     const login = async (email, password) => {
       setAuthError('');
@@ -168,7 +168,7 @@ export function DataProvider({ children }) {
       setDonors([]);
     };
 
-    // ─── DONORS ─────────────────────────────────────────────────────────────
+   
 
     const getDonorTotal = (name) =>
       donations
@@ -184,9 +184,7 @@ export function DataProvider({ children }) {
     const deleteDonor = (id) =>
       setDonors((prev) => prev.filter((d) => d.id !== id));
 
-    // ─── CAMPAIGNS ──────────────────────────────────────────────────────────
 
-    // Always uses publicStats — works for both guests and logged-in users
     const getCampaignRaised = (title) => {
       const stat = publicStats.find((s) => s.campaign === title);
       return stat ? Number(stat.raised) : 0;
@@ -236,8 +234,7 @@ export function DataProvider({ children }) {
       }
     };
 
-    // ─── DONATIONS ──────────────────────────────────────────────────────────
-
+    
     const addDonation = async (donation) => {
       try {
         const headers = { 'Content-Type': 'application/json' };
@@ -251,9 +248,9 @@ export function DataProvider({ children }) {
         const data = await res.json();
 
         if (res.ok) {
-          // Refresh personal donations for dashboard
+         
           await fetchDonations(token, user);
-          // Refresh public stats so home + transparency pages update immediately
+        
           await fetchPublicStats();
         }
 
@@ -297,7 +294,7 @@ export function DataProvider({ children }) {
     };
 
     return {
-      // auth
+   
       user,
       token,
       authError,
@@ -306,21 +303,21 @@ export function DataProvider({ children }) {
       login,
       register,
       logout,
-      // donors
+      
       donors,
       donorCount,
       getDonorTotal,
       addDonor,
       updateDonor,
       deleteDonor,
-      // campaigns
+      
       campaigns,
       getCampaignRaised,
       fetchCampaigns,
       addCampaign,
       updateCampaign,
       deleteCampaign,
-      // donations
+      
       donations,
       publicStats,
       addDonation,

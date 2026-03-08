@@ -25,13 +25,13 @@ export function Communications() {
   const { token } = useData();
   const [activeTab, setActiveTab] = useState('templates');
 
-  // Messages state
+  
   const [messages, setMessages] = useState([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [historySearch, setHistorySearch] = useState('');
 
-  // Reply state
+
   const [replies, setReplies] = useState([]);
   const [replyBody, setReplyBody] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -150,7 +150,7 @@ export function Communications() {
         </Button>
       </div>
 
-      {/* Tabs */}
+      
       <div className="border-b border-gray-200">
         <nav className="-mb-px flex space-x-8">
           <button
@@ -180,7 +180,7 @@ export function Communications() {
         </nav>
       </div>
 
-      {/* ── TEMPLATES ── */}
+     
       {activeTab === 'templates' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {staticTemplates.map((template) => (
@@ -214,7 +214,7 @@ export function Communications() {
         </div>
       )}
 
-      {/* ── AUTOMATION ── */}
+   
       {activeTab === 'automation' && (
         <div className="space-y-4">
           {staticWorkflows.map((workflow) => (
@@ -239,7 +239,7 @@ export function Communications() {
         </div>
       )}
 
-      {/* ── MESSAGES (inbox) ── */}
+      
       {activeTab === 'history' && (
         <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4 h-[calc(100vh-280px)]">
           <Card className="flex flex-col overflow-hidden">

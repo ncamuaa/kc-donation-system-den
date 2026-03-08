@@ -9,14 +9,14 @@ import { useData } from '../context/DataContext';
 export function Dashboard() {
   const { donations, donors, campaigns, getCampaignRaised } = useData();
 
-  // Calculate Stats
+ 
   const completedDonations = donations.filter(d => d.status === 'Completed');
   const totalDonations = completedDonations.reduce((sum, d) => sum + d.amount, 0);
   const totalDonors = donors.length;
   const activeCampaigns = campaigns.filter(c => c.status === 'Active').length;
   const avgDonation = completedDonations.length > 0 ? totalDonations / completedDonations.length : 0;
 
-  // Calculate growth (mock logic for now since we don't have historical data)
+  
   const stats = [
     { 
       title: 'Total Donations', 
@@ -52,14 +52,14 @@ export function Dashboard() {
     },
   ];
 
-  // Prepare Chart Data
+  
   const campaignChartData = campaigns.slice(0, 5).map(c => ({
     name: c.title.length > 15 ? c.title.substring(0, 15) + '...' : c.title, 
     raised: getCampaignRaised(c.title),
     target: c.target
   }));
 
-  // Donation Channel Data
+  
   const channels = [...new Set(donations.map(d => d.channel))];
   const channelData = channels.map(channel => ({
     name: channel,
@@ -68,7 +68,7 @@ export function Dashboard() {
 
   const COLORS = ['#0ea5e9', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444'];
 
-  // Calculate trends based on actual data
+  
   const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
  
   const donationTrendData = monthNames.map((month, index) => {
@@ -80,7 +80,7 @@ export function Dashboard() {
     return { name: month, amount };
   });
 
-  // Donor Segmentation Data
+ 
   const donorTypes = [...new Set(donors.map(d => d.type))];
   const segmentationData = donorTypes.map(type => ({
     name: type,
@@ -100,7 +100,6 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* Stats Grid */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((item) => (
           <Card key={item.title}>
@@ -126,7 +125,7 @@ export function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Donation Trends */}
+       
         <Card>
           <CardHeader>
             <CardTitle>Donation Trends</CardTitle>
@@ -155,7 +154,7 @@ export function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Campaign Performance */}
+       
         <Card>
           <CardHeader>
             <CardTitle>Top Campaigns</CardTitle>
@@ -187,7 +186,7 @@ export function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Donations List */}
+        
         <Card className="lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Recent Donations</CardTitle>
@@ -232,7 +231,7 @@ export function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Segmentation Pie Chart */}
+       
         <Card>
           <CardHeader>
             <CardTitle>Donor Segmentation</CardTitle>

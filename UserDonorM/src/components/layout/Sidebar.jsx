@@ -38,7 +38,7 @@ export function Sidebar() {
 
   return (
     <div className="flex flex-col w-64 bg-white border-r border-gray-200 h-screen sticky top-0">
-      {/* Logo */}
+     
       <div className="flex items-center justify-center h-24 border-b border-gray-200 px-6">
         <img
           src={logo}
@@ -47,7 +47,7 @@ export function Sidebar() {
         />
       </div>
 
-      {/* Nav links */}
+     
       <div className="flex-1 overflow-y-auto py-4">
         <nav className="px-3 space-y-1">
           {navigation.map((item) => (
@@ -70,11 +70,11 @@ export function Sidebar() {
         </nav>
       </div>
 
-      {/* Bottom section */}
+     
       <div className="p-4 border-t border-gray-200 space-y-2">
         {isAuthenticated ? (
           <>
-            {/* User info */}
+        
             <div className="flex items-center gap-3 px-3 py-2 rounded-md bg-gray-50 mb-1">
               <div className="h-8 w-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 font-bold text-sm flex-shrink-0">
                 {user?.name?.charAt(0).toUpperCase() ?? <User className="h-4 w-4" />}
@@ -85,7 +85,7 @@ export function Sidebar() {
               </div>
             </div>
 
-            {/* Logout */}
+           
             <button
               onClick={handleLogout}
               className="flex items-center w-full px-3 py-2 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-50 hover:text-gray-900"
