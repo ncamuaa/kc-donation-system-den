@@ -19,8 +19,8 @@ export function DataProvider({ children }) {
   const [donations, setDonations] = useState([]);
   const [publicStats, setPublicStats] = useState([]);
   const [donorCount, setDonorCount] = useState(0);
+  const [events, setEvents] = useState([]);  // ← ADDED
 
-  
   const [user, setUser] = useState(() => {
     try { return JSON.parse(localStorage.getItem('user')) ?? null; }
     catch { return null; }
@@ -29,14 +29,12 @@ export function DataProvider({ children }) {
   const [authError, setAuthError] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
 
-
   const fetchPublicStats = useCallback(async () => {
     try {
       const res = await fetch(`${API_URL}/api/donations/public/stats`);
       if (res.ok) {
         const data = await res.json();
         setPublicStats(data);
-        
         const total = data.reduce((sum, s) => sum + Number(s.count || 0), 0);
         setDonorCount(total);
       }
@@ -45,10 +43,7 @@ export function DataProvider({ children }) {
     }
   }, []);
 
-  useEffect(() => {
-    fetchPublicStats();
-  }, [fetchPublicStats]);
-
+  useEffect(() => { fetchPublicStats(); }, [fetchPublicStats]);
 
   const fetchCampaigns = useCallback(async () => {
     try {
@@ -62,11 +57,20 @@ export function DataProvider({ children }) {
     }
   }, []);
 
-  useEffect(() => {
-    fetchCampaigns();
-  }, [fetchCampaigns]);
+  useEffect(() => { fetchCampaigns(); }, [fetchCampaigns]);
 
-  
+  // ← ADDED: fetch events publicly (no auth required)
+  const fetchEvents = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/events`);
+      if (res.ok) setEvents(await res.json());
+    } catch (err) {
+      console.error('Failed to fetch events:', err);
+    }
+  }, []);
+
+  useEffect(() => { fetchEvents(); }, [fetchEvents]);
+
   const fetchDonors = useCallback(async (currentToken, currentUser) => {
     if (!currentToken || !currentUser || currentUser.role !== 'admin') return;
     try {
@@ -79,12 +83,8 @@ export function DataProvider({ children }) {
     }
   }, []);
 
-  
   const fetchDonations = useCallback(async (currentToken, currentUser) => {
-    if (!currentToken || !currentUser) {
-      setDonations([]);
-      return;
-    }
+    if (!currentToken || !currentUser) { setDonations([]); return; }
     try {
       const endpoint = currentUser.role === 'admin'
         ? `${API_URL}/api/donations`
@@ -105,11 +105,8 @@ export function DataProvider({ children }) {
 
   const value = useMemo(() => {
 
-  
-
     const login = async (email, password) => {
-      setAuthError('');
-      setAuthLoading(true);
+      setAuthError(''); setAuthLoading(true);
       try {
         const res = await fetch(`${API_URL}/api/users/login`, {
           method: 'POST',
@@ -120,20 +117,16 @@ export function DataProvider({ children }) {
         if (!res.ok) { setAuthError(data.message || 'Login failed'); return false; }
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
-        setToken(data.token);
-        setUser(data.user);
+        setToken(data.token); setUser(data.user);
         return true;
       } catch {
         setAuthError('Unable to connect to server. Please try again.');
         return false;
-      } finally {
-        setAuthLoading(false);
-      }
+      } finally { setAuthLoading(false); }
     };
 
     const register = async (name, email, password) => {
-      setAuthError('');
-      setAuthLoading(true);
+      setAuthError(''); setAuthLoading(true);
       try {
         const res = await fetch(`${API_URL}/api/users/register`, {
           method: 'POST',
@@ -147,28 +140,19 @@ export function DataProvider({ children }) {
         }
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
-        setToken(data.token);
-        setUser(data.user);
+        setToken(data.token); setUser(data.user);
         return true;
       } catch {
         setAuthError('Unable to connect to server. Please try again.');
         return false;
-      } finally {
-        setAuthLoading(false);
-      }
+      } finally { setAuthLoading(false); }
     };
 
     const logout = async () => {
       await fetch(`${API_URL}/api/users/logout`, { method: 'POST' }).catch(() => {});
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      setToken(null);
-      setUser(null);
-      setDonations([]);
-      setDonors([]);
+      localStorage.removeItem('token'); localStorage.removeItem('user');
+      setToken(null); setUser(null); setDonations([]); setDonors([]);
     };
-
-   
 
     const getDonorTotal = (name) =>
       donations
@@ -184,7 +168,6 @@ export function DataProvider({ children }) {
     const deleteDonor = (id) =>
       setDonors((prev) => prev.filter((d) => d.id !== id));
 
-
     const getCampaignRaised = (title) => {
       const stat = publicStats.find((s) => s.campaign === title);
       return stat ? Number(stat.raised) : 0;
@@ -198,13 +181,8 @@ export function DataProvider({ children }) {
           body: JSON.stringify(campaign),
         });
         const data = await res.json();
-        if (res.ok) {
-          setCampaigns((prev) => [data, ...prev]);
-          return data;
-        }
-      } catch (err) {
-        console.error('Add campaign error:', err);
-      }
+        if (res.ok) { setCampaigns((prev) => [data, ...prev]); return data; }
+      } catch (err) { console.error('Add campaign error:', err); }
       return null;
     };
 
@@ -217,9 +195,7 @@ export function DataProvider({ children }) {
         });
         const data = await res.json();
         if (res.ok) setCampaigns((prev) => prev.map((c) => c.id === updated.id ? data : c));
-      } catch (err) {
-        console.error('Update campaign error:', err);
-      }
+      } catch (err) { console.error('Update campaign error:', err); }
     };
 
     const deleteCampaign = async (id) => {
@@ -229,36 +205,25 @@ export function DataProvider({ children }) {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (res.ok) setCampaigns((prev) => prev.filter((c) => c.id !== id));
-      } catch (err) {
-        console.error('Delete campaign error:', err);
-      }
+      } catch (err) { console.error('Delete campaign error:', err); }
     };
 
-    
     const addDonation = async (donation) => {
       try {
         const headers = { 'Content-Type': 'application/json' };
         if (token) headers.Authorization = `Bearer ${token}`;
-
         const res = await fetch(`${API_URL}/api/donations`, {
           method: 'POST',
           headers,
           body: JSON.stringify(donation),
         });
         const data = await res.json();
-
         if (res.ok) {
-         
           await fetchDonations(token, user);
-        
           await fetchPublicStats();
         }
-
         return res.ok ? data : null;
-      } catch (err) {
-        console.error('Add donation error:', err);
-        return null;
-      }
+      } catch (err) { console.error('Add donation error:', err); return null; }
     };
 
     const updateDonation = async (updated) => {
@@ -273,9 +238,7 @@ export function DataProvider({ children }) {
           setDonations((prev) => prev.map((d) => (d.id === updated.id ? data : d)));
           await fetchPublicStats();
         }
-      } catch (err) {
-        console.error('Update donation error:', err);
-      }
+      } catch (err) { console.error('Update donation error:', err); }
     };
 
     const deleteDonation = async (id) => {
@@ -288,13 +251,10 @@ export function DataProvider({ children }) {
           setDonations((prev) => prev.filter((d) => d.id !== id));
           await fetchPublicStats();
         }
-      } catch (err) {
-        console.error('Delete donation error:', err);
-      }
+      } catch (err) { console.error('Delete donation error:', err); }
     };
 
     return {
-   
       user,
       token,
       authError,
@@ -303,28 +263,32 @@ export function DataProvider({ children }) {
       login,
       register,
       logout,
-      
+
       donors,
       donorCount,
       getDonorTotal,
       addDonor,
       updateDonor,
       deleteDonor,
-      
+
       campaigns,
       getCampaignRaised,
       fetchCampaigns,
       addCampaign,
       updateCampaign,
       deleteCampaign,
-      
+
       donations,
       publicStats,
       addDonation,
       updateDonation,
       deleteDonation,
+
+      events,       // ← ADDED
+      fetchEvents,  // ← ADDED
     };
-  }, [user, token, authError, authLoading, donors, donorCount, campaigns, donations, publicStats, fetchDonations, fetchDonors, fetchCampaigns, fetchPublicStats]);
+  }, [user, token, authError, authLoading, donors, donorCount, campaigns, donations, publicStats, events, fetchDonations, fetchDonors, fetchCampaigns, fetchPublicStats, fetchEvents]);
+  //                                                                                                  ↑ ADDED: events, fetchEvents
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 }

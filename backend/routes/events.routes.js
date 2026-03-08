@@ -40,7 +40,7 @@ const mapEvent = (row) => ({
 });
 
 
-router.get("/", requireAuth, async (req, res) => {
+router.get("/", async (req, res) => {
   try {
     const [rows] = await pool.query("SELECT * FROM events ORDER BY date DESC");
     res.json(rows.map(mapEvent));

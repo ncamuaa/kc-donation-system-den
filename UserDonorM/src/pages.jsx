@@ -3,10 +3,12 @@ import { createPortal } from 'react-dom'
 import {
   Search, Heart, BarChart3, Bell, LayoutGrid, User,
   Megaphone, Mail, Menu, LogOut, X, TrendingUp, Users, ChevronRight,
+  Calendar, Clock, Ticket,
 } from 'lucide-react'
 import logo from './assets/image-removebg-preview.png'
 import { useData } from './context/DataContext'
 import { MessageSquare } from 'lucide-react'
+
 
 
 
@@ -135,12 +137,11 @@ export function SideNav({ isLoggedIn, activePage, onNavigate, collapsed, userNam
 }
 
 export function HeaderBar({ userName, onToggleSidebar, onNavigate }) {
-  const { token, campaigns, donors, donations } = useData()
+  const { token, campaigns, donors, donations, events } = useData()
   const [messages, setMessages] = useState([])
   const [newReplies, setNewReplies] = useState([])
   const [bellOpen, setBellOpen] = useState(false)
   const bellRef = useRef(null)
-
 
   const [query, setQuery] = useState('')
   const [searchOpen, setSearchOpen] = useState(false)
@@ -176,7 +177,6 @@ export function HeaderBar({ userName, onToggleSidebar, onNavigate }) {
     return () => clearInterval(interval)
   }, [token])
 
- 
   useEffect(() => {
     const handleClick = (e) => {
       if (bellRef.current && !bellRef.current.contains(e.target)) setBellOpen(false)
@@ -185,7 +185,6 @@ export function HeaderBar({ userName, onToggleSidebar, onNavigate }) {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
-  
   useEffect(() => {
     const handleClick = (e) => {
       const portal = document.getElementById('search-portal')
@@ -197,7 +196,6 @@ export function HeaderBar({ userName, onToggleSidebar, onNavigate }) {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
-  
   const updateDropdownPos = useCallback(() => {
     if (searchWrapRef.current) {
       const rect = searchWrapRef.current.getBoundingClientRect()
@@ -223,7 +221,6 @@ export function HeaderBar({ userName, onToggleSidebar, onNavigate }) {
 
   const totalNew = newReplies.length
 
-  
   const q = query.trim().toLowerCase()
 
   const matchedCampaigns = q.length >= 1
@@ -244,9 +241,15 @@ export function HeaderBar({ userName, onToggleSidebar, onNavigate }) {
       ).slice(0, 3)
     : []
 
-  const hasResults = matchedCampaigns.length > 0 || matchedDonors.length > 0 || matchedDonations.length > 0
+  const matchedEvents = q.length >= 1
+    ? (events || []).filter(e =>
+        (e.title || '').toLowerCase().includes(q) || (e.description || '').toLowerCase().includes(q)
+      ).slice(0, 3)
+    : []
+
+  const hasResults = matchedCampaigns.length > 0 || matchedDonors.length > 0 || matchedDonations.length > 0 || matchedEvents.length > 0
   const showDropdown = searchOpen && q.length >= 1
-  const totalResults = matchedCampaigns.length + matchedDonors.length + matchedDonations.length
+  const totalResults = matchedCampaigns.length + matchedDonors.length + matchedDonations.length + matchedEvents.length
 
   const handleResultClick = (page) => {
     setQuery('')
@@ -257,7 +260,6 @@ export function HeaderBar({ userName, onToggleSidebar, onNavigate }) {
   const handleKeyDown = (e) => {
     if (e.key === 'Escape') { setQuery(''); setSearchOpen(false) }
   }
-
 
   const SearchDropdown = (
     <div
@@ -340,6 +342,37 @@ export function HeaderBar({ userName, onToggleSidebar, onNavigate }) {
               ))}
             </div>
           )}
+          {matchedEvents.length > 0 && (
+            <div>
+              <div className="px-4 py-2 flex items-center gap-1.5 bg-gray-50 border-b border-gray-100">
+                <Calendar className="h-3 w-3 text-gray-400" />
+                <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Events</span>
+              </div>
+              {matchedEvents.map((e) => (
+                <button key={e.id} type="button" onClick={() => handleResultClick('campaigns')}
+                  className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-blue-50 transition-colors text-left group border-b border-gray-50">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">{e.title}</p>
+                    {e.description && <p className="text-xs text-gray-400 truncate mt-0.5">{e.description}</p>}
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0 ml-3">
+                    {e.date && (
+                      <span className="text-[10px] text-gray-400">
+                        {new Date(e.date).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </span>
+                    )}
+                    <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
+                      e.status === 'Active' || e.status === 'Upcoming' ? 'bg-green-100 text-green-700' :
+                      e.status === 'Ongoing' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'
+                    }`}>
+                      {e.status || 'Upcoming'}
+                    </span>
+                    <ChevronRight className="h-3.5 w-3.5 text-gray-300 group-hover:text-blue-400 transition-colors" />
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
       <div className="px-4 py-2 border-t border-gray-100 bg-gray-50 flex items-center justify-between">
@@ -359,8 +392,6 @@ export function HeaderBar({ userName, onToggleSidebar, onNavigate }) {
         <button type="button" onClick={onToggleSidebar} className="p-1.5 rounded-full text-gray-500 hover:text-blue-600 hover:bg-blue-50">
           <Menu className="h-5 w-5" />
         </button>
-
-        
         <div className="relative w-full" ref={searchWrapRef}>
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <Search className="h-4 w-4 text-gray-400" />
@@ -373,7 +404,7 @@ export function HeaderBar({ userName, onToggleSidebar, onNavigate }) {
             onFocus={() => { setSearchOpen(true); updateDropdownPos() }}
             onKeyDown={handleKeyDown}
             className="block w-full pl-9 pr-8 py-2 border border-gray-300 rounded-full bg-gray-50 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm transition-colors"
-            placeholder="Search campaigns, donors, donations..."
+            placeholder="Search campaigns, events, donors..."
           />
           {query && (
             <button type="button" onClick={() => { setQuery(''); setSearchOpen(false); inputRef.current?.focus() }}
@@ -384,7 +415,6 @@ export function HeaderBar({ userName, onToggleSidebar, onNavigate }) {
         </div>
       </div>
 
-     
       {showDropdown && createPortal(SearchDropdown, document.body)}
 
       <div className="flex items-center gap-3">
@@ -392,8 +422,6 @@ export function HeaderBar({ userName, onToggleSidebar, onNavigate }) {
           <span className="mr-1">Last updated:</span>
           <span>{new Date().toLocaleTimeString()}</span>
         </div>
-
-        
         <div className="relative" ref={bellRef}>
           <button type="button" onClick={() => setBellOpen((v) => !v)}
             className="relative p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-50">
@@ -404,7 +432,6 @@ export function HeaderBar({ userName, onToggleSidebar, onNavigate }) {
               </span>
             )}
           </button>
-
           {bellOpen && (
             <div className="absolute right-0 top-10 w-80 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden z-50">
               <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
@@ -480,7 +507,6 @@ export function HeaderBar({ userName, onToggleSidebar, onNavigate }) {
             </div>
           )}
         </div>
-
         {userName && (
           <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-sm">
             {userName.charAt(0).toUpperCase()}
@@ -580,6 +606,90 @@ export function HomeFeaturedCampaigns({ onDonate, onViewCampaigns }) {
                 <button type="button" onClick={() => onDonate(campaign.id)} className="mt-2 w-full inline-flex items-center justify-center rounded-full bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">
                   Donate
                 </button>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </section>
+  )
+}
+export function HomeFeaturedEvents({ onViewCampaigns, onDonate }) {
+  const { events } = useData()
+  const featured = (events || []).slice(0, 3)
+
+  return (
+    <section className="py-6">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-sm font-semibold text-gray-900">Upcoming Events</h2>
+        <button type="button" onClick={onViewCampaigns} className="text-xs text-blue-600 hover:underline">View all</button>
+      </div>
+      {featured.length === 0 && (
+        <p className="text-xs text-gray-500 text-center py-8">No upcoming events yet.</p>
+      )}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {featured.map((event) => {
+          const statusColor =
+            event.status === 'Active' || event.status === 'Upcoming'
+              ? 'bg-green-100 text-green-700'
+              : event.status === 'Ongoing'
+              ? 'bg-blue-100 text-blue-700'
+              : 'bg-gray-100 text-gray-500'
+
+          return (
+            <div key={event.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm flex flex-col transform transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
+              <div className="h-28 bg-gray-100 overflow-hidden relative">
+                {event.image
+                  ? <img src={`http://localhost:5001${event.image}`} alt={event.title} className="w-full h-full object-cover" />
+                  : <div className="w-full h-full bg-gradient-to-br from-indigo-100 to-purple-200 flex items-center justify-center">
+                      <Calendar className="h-8 w-8 text-indigo-300" />
+                    </div>
+                }
+                <span className={`absolute top-2 right-2 text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusColor}`}>
+                  {event.status || 'Upcoming'}
+                </span>
+              </div>
+              <div className="p-4 flex-1 flex flex-col gap-2">
+                <p className="text-sm font-semibold text-gray-900 leading-snug">{event.title}</p>
+                {event.description && <p className="text-xs text-gray-500 line-clamp-2">{event.description}</p>}
+                <div className="flex flex-col gap-1 mt-1">
+                  {event.date && (
+                    <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
+                      <Calendar className="h-3 w-3 shrink-0 text-gray-400" />
+                      <span>{new Date(event.date).toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                    </div>
+                  )}
+                  {event.time && (
+                    <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
+                      <Clock className="h-3 w-3 shrink-0 text-gray-400" />
+                      <span>{event.time}</span>
+                    </div>
+                  )}
+                  {event.goal > 0 && (
+                    <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
+                      <TrendingUp className="h-3 w-3 shrink-0 text-gray-400" />
+                      <span>Goal: {formatCurrency(event.goal)}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="mt-auto flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => onDonate(event.id, 'event')}
+                    className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-full bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 transition-colors"
+                  >
+                    <Heart className="h-3 w-3" />
+                    Donate
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onViewCampaigns}
+                    className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-full border border-blue-600 px-3 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-50 transition-colors"
+                  >
+                    <Ticket className="h-3 w-3" />
+                    Register
+                  </button>
+                </div>
               </div>
             </div>
           )
@@ -731,6 +841,7 @@ export function HomePage({ onDonate, onViewCampaigns }) {
     <div className="w-full pb-10">
       <HeroSection onDonate={onDonate} onViewCampaigns={onViewCampaigns} />
       <HomeFeaturedCampaigns onDonate={onDonate} onViewCampaigns={onViewCampaigns} />
+      <HomeFeaturedEvents onDonate={onDonate} onViewCampaigns={onViewCampaigns} />
       <ImpactStats />
       <WhyDonateSection />
       <TestimonialsSection />
@@ -740,8 +851,12 @@ export function HomePage({ onDonate, onViewCampaigns }) {
   )
 }
 
+
+const API_URL = 'http://localhost:5001'
+
 export function CampaignsPage({ onViewDetails, onDonate }) {
-  const { campaigns, getCampaignRaised } = useData()
+  const { campaigns, getCampaignRaised, events } = useData()
+  const [activeTab, setActiveTab] = useState('projects')
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('All')
   const [status, setStatus] = useState('All')
@@ -749,8 +864,8 @@ export function CampaignsPage({ onViewDetails, onDonate }) {
 
   const categories = ['All', ...new Set(campaigns.map((c) => c.category).filter(Boolean))]
 
-  const filtered = campaigns.filter((c) => {
-    const matchesSearch = c.title.toLowerCase().includes(search.toLowerCase()) || c.description.toLowerCase().includes(search.toLowerCase())
+  const filteredCampaigns = campaigns.filter((c) => {
+    const matchesSearch = c.title.toLowerCase().includes(search.toLowerCase()) || (c.description || '').toLowerCase().includes(search.toLowerCase())
     const matchesCategory = category === 'All' || c.category === category
     const matchesStatus = status === 'All' || c.status === status
     return matchesSearch && matchesCategory && matchesStatus
@@ -761,81 +876,199 @@ export function CampaignsPage({ onViewDetails, onDonate }) {
     return 0
   })
 
+ const filteredEvents = (events || []).filter((e) => {
+  const q = search.toLowerCase()
+  return (
+    (e.title || '').toLowerCase().includes(q) ||
+    (e.description || '').toLowerCase().includes(q)
+  )
+})
+
   return (
     <div className="w-full py-4">
+      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Campaigns</h1>
-          <p className="text-sm text-gray-500">Find a campaign that matches the cause you care about most.</p>
+          <p className="text-sm text-gray-500">Find a campaign or event that matches the cause you care about most.</p>
         </div>
         <div className="relative w-full md:w-64">
           <Search className="h-4 w-4 text-gray-400 absolute left-3 top-2.5" />
-          <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-full text-xs bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="Search campaigns" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-full text-xs bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            placeholder={activeTab === 'projects' ? 'Search campaigns...' : 'Search events...'}
+          />
         </div>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 text-xs">
-        <div>
-          <label className="block text-[11px] text-gray-500 mb-1">Category</label>
-          <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full border border-gray-300 rounded-full px-3 py-1.5 bg-white">
-            {categories.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="block text-[11px] text-gray-500 mb-1">Status</label>
-          <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full border border-gray-300 rounded-full px-3 py-1.5 bg-white">
-            <option value="All">All</option>
-            <option value="Active">Active</option>
-            <option value="Completed">Completed</option>
-            <option value="Paused">Paused</option>
-          </select>
-        </div>
-        <div className="md:col-span-2">
-          <label className="block text-[11px] text-gray-500 mb-1">Sort by</label>
-          <select value={sort} onChange={(e) => setSort(e.target.value)} className="w-full border border-gray-300 rounded-full px-3 py-1.5 bg-white">
-            <option>Most Funded</option><option>Newest</option><option>Ending Soon</option>
-          </select>
-        </div>
+
+      {/* Tabs */}
+      <div className="flex gap-1 mb-6 bg-gray-100 rounded-full p-1 w-fit">
+        <button
+          type="button"
+          onClick={() => setActiveTab('projects')}
+          className={`px-5 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+            activeTab === 'projects' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Projects
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('events')}
+          className={`px-5 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+            activeTab === 'events' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Events
+        </button>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {campaigns.length === 0 && (
-          <p className="text-xs text-gray-500 col-span-3 text-center py-8">No campaigns found.</p>
-        )}
-        {filtered.map((campaign) => {
-          const raised = getCampaignRaised(campaign.title)
-          const percent = campaign.target ? Math.min(Math.round((raised / campaign.target) * 100), 100) : 0
-          return (
-            <div key={campaign.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm flex flex-col">
-              <div className="h-28 bg-gray-100 overflow-hidden">
-                {campaign.image
-                  ? <img src={campaign.image} alt={campaign.title} className="w-full h-full object-cover" />
-                  : <div className="w-full h-full bg-gradient-to-br from-blue-100 to-indigo-200 flex items-center justify-center text-blue-400 text-xs">No image</div>
-                }
-              </div>
-              <div className="p-4 flex-1 flex flex-col gap-2">
-                <p className="text-xs text-blue-600 font-medium">{campaign.category}</p>
-                <p className="text-sm font-semibold text-gray-900">{campaign.title}</p>
-                <p className="text-xs text-gray-500 line-clamp-2">{campaign.description}</p>
-                <div>
-                  <div className="flex justify-between text-[11px] text-gray-500 mb-1">
-                    <span>{formatCurrency(raised)} raised</span>
-                    <span>{formatCurrency(campaign.target)} goal</span>
-                  </div>
-                  <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <div className="h-2 bg-blue-500 rounded-full" style={{ width: `${percent}%` }} />
-                  </div>
-                  <div className="flex justify-between items-center mt-1 text-[11px] text-gray-500">
-                    <span>{percent}% funded</span><span>{daysLeft(campaign.endDate)}</span>
-                  </div>
-                </div>
-                <div className="mt-2 flex gap-2">
-                  <button type="button" onClick={() => onDonate(campaign.id)} className="flex-1 inline-flex items-center justify-center rounded-full bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">Donate</button>
-                  <button type="button" onClick={() => onViewDetails(campaign.id)} className="flex-1 inline-flex items-center justify-center rounded-full border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50">View Details</button>
-                </div>
-              </div>
+
+      {/* Projects Tab */}
+      {activeTab === 'projects' && (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 text-xs">
+            <div>
+              <label className="block text-[11px] text-gray-500 mb-1">Category</label>
+              <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full border border-gray-300 rounded-full px-3 py-1.5 bg-white">
+                {categories.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
+              </select>
             </div>
-          )
-        })}
-      </div>
+            <div>
+              <label className="block text-[11px] text-gray-500 mb-1">Status</label>
+              <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full border border-gray-300 rounded-full px-3 py-1.5 bg-white">
+                <option value="All">All</option>
+                <option value="Active">Active</option>
+                <option value="Completed">Completed</option>
+                <option value="Paused">Paused</option>
+              </select>
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-[11px] text-gray-500 mb-1">Sort by</label>
+              <select value={sort} onChange={(e) => setSort(e.target.value)} className="w-full border border-gray-300 rounded-full px-3 py-1.5 bg-white">
+                <option>Most Funded</option><option>Newest</option><option>Ending Soon</option>
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {campaigns.length === 0 && (
+              <p className="text-xs text-gray-500 col-span-3 text-center py-8">No campaigns found.</p>
+            )}
+            {filteredCampaigns.map((campaign) => {
+              const raised = getCampaignRaised(campaign.title)
+              const percent = campaign.target ? Math.min(Math.round((raised / campaign.target) * 100), 100) : 0
+              return (
+                <div key={campaign.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm flex flex-col">
+                  <div className="h-28 bg-gray-100 overflow-hidden">
+                    {campaign.image
+                      ? <img src={campaign.image} alt={campaign.title} className="w-full h-full object-cover" />
+                      : <div className="w-full h-full bg-gradient-to-br from-blue-100 to-indigo-200 flex items-center justify-center text-blue-400 text-xs">No image</div>
+                    }
+                  </div>
+                  <div className="p-4 flex-1 flex flex-col gap-2">
+                    <p className="text-xs text-blue-600 font-medium">{campaign.category}</p>
+                    <p className="text-sm font-semibold text-gray-900">{campaign.title}</p>
+                    <p className="text-xs text-gray-500 line-clamp-2">{campaign.description}</p>
+                    <div>
+                      <div className="flex justify-between text-[11px] text-gray-500 mb-1">
+                        <span>{formatCurrency(raised)} raised</span>
+                        <span>{formatCurrency(campaign.target)} goal</span>
+                      </div>
+                      <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div className="h-2 bg-blue-500 rounded-full" style={{ width: `${percent}%` }} />
+                      </div>
+                      <div className="flex justify-between items-center mt-1 text-[11px] text-gray-500">
+                        <span>{percent}% funded</span><span>{daysLeft(campaign.endDate)}</span>
+                      </div>
+                    </div>
+                    <div className="mt-2 flex gap-2">
+                      <button type="button" onClick={() => onDonate(campaign.id)} className="flex-1 inline-flex items-center justify-center rounded-full bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">Donate</button>
+                      <button type="button" onClick={() => onViewDetails(campaign.id)} className="flex-1 inline-flex items-center justify-center rounded-full border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50">View Details</button>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </>
+      )}
+
+      {/* Events Tab */}
+      {activeTab === 'events' && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {filteredEvents.length === 0 && (
+            <div className="col-span-3 text-center py-12 text-gray-400">
+              <Calendar className="h-8 w-8 mx-auto mb-2 opacity-40" />
+              <p className="text-sm">No events found.</p>
+            </div>
+          )}
+          {filteredEvents.map((event) => {
+            const statusColor =
+              event.status === 'Active' || event.status === 'Upcoming'
+                ? 'bg-green-100 text-green-700'
+                : event.status === 'Ongoing'
+                ? 'bg-blue-100 text-blue-700'
+                : 'bg-gray-100 text-gray-500'
+
+            return (
+              <div key={event.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm flex flex-col transform transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
+                <div className="h-32 bg-gray-100 overflow-hidden relative">
+                  {event.image
+                    ? <img src={`${API_URL}${event.image}`} alt={event.title} className="w-full h-full object-cover" />
+                    : <div className="w-full h-full bg-gradient-to-br from-indigo-100 to-purple-200 flex items-center justify-center">
+                        <Calendar className="h-8 w-8 text-indigo-300" />
+                      </div>
+                  }
+                  <span className={`absolute top-2 right-2 text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusColor}`}>
+                    {event.status}
+                  </span>
+                </div>
+                <div className="p-4 flex-1 flex flex-col gap-2">
+                  <p className="text-sm font-semibold text-gray-900 leading-snug">{event.title}</p>
+                  {event.description && <p className="text-xs text-gray-500 line-clamp-2">{event.description}</p>}
+                  <div className="flex flex-col gap-1 mt-1">
+                    {event.date && (
+                      <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
+                        <Calendar className="h-3 w-3 shrink-0 text-gray-400" />
+                        <span>{new Date(event.date).toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                      </div>
+                    )}
+                    {event.time && (
+                      <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
+                        <Clock className="h-3 w-3 shrink-0 text-gray-400" />
+                        <span>{event.time}</span>
+                      </div>
+                    )}
+                    {event.goal && (
+                      <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
+                        <TrendingUp className="h-3 w-3 shrink-0 text-gray-400" />
+                        <span>Goal: {formatCurrency(event.goal)}</span>
+                      </div>
+                    )}
+                  </div>
+                 <button
+    type="button"
+    onClick={() => onDonate(event.id, 'event')}
+    className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-full bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 transition-colors"
+  >
+    <Heart className="h-3 w-3" />
+    Donate
+  </button>
+  <button
+    type="button"
+    className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-full border border-blue-600 px-3 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-50 transition-colors"
+  >
+    <Ticket className="h-3 w-3" />
+    Register
+  </button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
@@ -932,7 +1165,7 @@ export function CampaignDetailsPage({ campaign, onDonate }) {
 }
 
 export function DonationPage({ selectedCampaignId, onSubmit, onBackToCampaign }) {
-  const { campaigns, getCampaignRaised } = useData()
+  const { campaigns, getCampaignRaised, events } = useData()
   const [campaignId, setCampaignId] = useState(selectedCampaignId || '')
   const [amount, setAmount] = useState('')
   const [type, setType] = useState('One-time')
@@ -945,68 +1178,126 @@ export function DonationPage({ selectedCampaignId, onSubmit, onBackToCampaign })
   const [termsAccepted, setTermsAccepted] = useState(false)
   const quickAmounts = [500, 1000, 5000]
 
-  const currentCampaign = campaigns.find((c) => c.id === campaignId) ||
-    campaigns.find((c) => c.id === selectedCampaignId) ||
-    campaigns[0]
+  // Check if selected value is an event (prefixed with "event-")
+  const isEvent = String(campaignId).startsWith('event-')
+  const eventId = isEvent ? String(campaignId).replace('event-', '') : null
+
+  // Find the currently selected campaign OR event
+  const currentCampaign = isEvent
+    ? (events || []).find((e) => String(e.id) === String(eventId))
+    : campaigns.find((c) => String(c.id) === String(campaignId)) ||
+      campaigns.find((c) => String(c.id) === String(selectedCampaignId)) ||
+      campaigns[0]
+
+  const currentRaised = !isEvent ? getCampaignRaised(currentCampaign?.title) : 0
+  const currentPercent = currentCampaign?.target
+    ? Math.min(Math.round((currentRaised / currentCampaign.target) * 100), 100)
+    : 0
 
   const handleSubmit = (e) => {
     e.preventDefault()
     if (!campaignId || !amount || !name || !email || !termsAccepted) return
-    const chosenCampaign = campaigns.find((c) => c.id === campaignId)
+
+    const chosenTitle = isEvent
+      ? (events || []).find((ev) => String(ev.id) === String(eventId))?.title || ''
+      : campaigns.find((c) => String(c.id) === String(campaignId))?.title || ''
+
     onSubmit({
-      campaignId, campaignTitle: chosenCampaign?.title || '',
-      amount: Number(amount), type, method, name, email, phone, anonymous, message,
+      campaignId,
+      campaignTitle: chosenTitle,
+      amount: Number(amount),
+      type, method, name, email, phone, anonymous, message,
       reference: `KC-${Date.now()}`,
       date: new Date().toLocaleDateString(),
     })
   }
 
-  if (!currentCampaign) return <div className="py-8 text-center text-gray-500 text-sm">Loading campaigns...</div>
-
-  const currentRaised = getCampaignRaised(currentCampaign.title)
-  const currentPercent = currentCampaign.target
-    ? Math.min(Math.round((currentRaised / currentCampaign.target) * 100), 100) : 0
+  if (!currentCampaign) return (
+    <div className="py-8 text-center text-gray-500 text-sm">Loading...</div>
+  )
 
   return (
     <div className="py-6 grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(260px,1fr)]">
       <div>
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-2xl font-bold text-gray-900">Make a donation</h1>
-          {onBackToCampaign && <button type="button" onClick={onBackToCampaign} className="text-xs text-gray-500 hover:text-blue-600">Back to campaign</button>}
+          {onBackToCampaign && (
+            <button type="button" onClick={onBackToCampaign} className="text-xs text-gray-500 hover:text-blue-600">
+              Back to campaign
+            </button>
+          )}
         </div>
         <form onSubmit={handleSubmit} className="bg-white border border-gray-200 rounded-xl shadow-sm p-4 space-y-4 text-xs">
           <div>
-            <label className="block text-[11px] text-gray-500 mb-1">Select campaign</label>
-            <select value={campaignId} onChange={(e) => setCampaignId(e.target.value)} className="w-full border border-gray-300 rounded-full px-3 py-1.5 bg-white">
-              <option value="">Choose a campaign</option>
-              {campaigns.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
+            <label className="block text-[11px] text-gray-500 mb-1">Select campaign or event</label>
+            <select
+              value={campaignId}
+              onChange={(e) => setCampaignId(e.target.value)}
+              className="w-full border border-gray-300 rounded-full px-3 py-1.5 bg-white"
+            >
+              <option value="">Choose a campaign or event</option>
+              {campaigns.length > 0 && (
+                <optgroup label="📢 Projects">
+                  {campaigns.map((c) => (
+                    <option key={c.id} value={c.id}>{c.title}</option>
+                  ))}
+                </optgroup>
+              )}
+              {(events || []).length > 0 && (
+                <optgroup label="📅 Events">
+                  {events.map((e) => (
+                    <option key={`event-${e.id}`} value={`event-${e.id}`}>{e.title}</option>
+                  ))}
+                </optgroup>
+              )}
             </select>
           </div>
+
           <div>
             <label className="block text-[11px] text-gray-500 mb-1">Choose amount</label>
             <div className="flex flex-wrap gap-2 mb-2">
               {quickAmounts.map((value) => (
-                <button key={value} type="button" onClick={() => setAmount(String(value))} className={`px-3 py-1.5 rounded-full border text-xs ${Number(amount) === value ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-gray-300 text-gray-700 hover:bg-gray-50'}`}>
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setAmount(String(value))}
+                  className={`px-3 py-1.5 rounded-full border text-xs ${
+                    Number(amount) === value
+                      ? 'border-blue-600 bg-blue-50 text-blue-700'
+                      : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
                   {formatCurrency(value)}
                 </button>
               ))}
             </div>
-            <input type="number" min="1" value={amount} onChange={(e) => setAmount(e.target.value)} className="w-full border border-gray-300 rounded-full px-3 py-1.5 bg-gray-50" placeholder="Or enter custom amount" />
+            <input
+              type="number" min="1" value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="w-full border border-gray-300 rounded-full px-3 py-1.5 bg-gray-50"
+              placeholder="Or enter custom amount"
+            />
           </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-[11px] text-gray-500 mb-1">Donation type</label>
               <select value={type} onChange={(e) => setType(e.target.value)} className="w-full border border-gray-300 rounded-full px-3 py-1.5 bg-white">
-                <option>One-time</option><option>Monthly (Recurring)</option>
+                <option>One-time</option>
+                <option>Monthly (Recurring)</option>
               </select>
             </div>
             <div>
               <label className="block text-[11px] text-gray-500 mb-1">Payment method</label>
               <select value={method} onChange={(e) => setMethod(e.target.value)} className="w-full border border-gray-300 rounded-full px-3 py-1.5 bg-white">
-                <option>GCash</option><option>Bank Transfer</option><option>Credit Card</option><option>PayPal</option>
+                <option>GCash</option>
+                <option>Bank Transfer</option>
+                <option>Credit Card</option>
+                <option>PayPal</option>
               </select>
             </div>
           </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-[11px] text-gray-500 mb-1">Full name</label>
@@ -1017,6 +1308,7 @@ export function DonationPage({ selectedCampaignId, onSubmit, onBackToCampaign })
               <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full border border-gray-300 rounded-full px-3 py-1.5 bg-gray-50" />
             </div>
           </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-[11px] text-gray-500 mb-1">Phone (optional)</label>
@@ -1027,33 +1319,70 @@ export function DonationPage({ selectedCampaignId, onSubmit, onBackToCampaign })
               <label htmlFor="anonymous" className="text-[11px] text-gray-600">Give anonymously</label>
             </div>
           </div>
+
           <div>
             <label className="block text-[11px] text-gray-500 mb-1">Optional message</label>
             <textarea value={message} onChange={(e) => setMessage(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-50 text-xs" rows={3} />
           </div>
+
           <div className="flex items-start gap-2">
             <input id="terms" type="checkbox" checked={termsAccepted} onChange={(e) => setTermsAccepted(e.target.checked)} className="h-3 w-3 text-blue-600 border-gray-300 rounded mt-0.5" />
             <label htmlFor="terms" className="text-[11px] text-gray-600">I agree to the terms and conditions and privacy policy.</label>
           </div>
-          <button type="submit" className="w-full inline-flex items-center justify-center rounded-full bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700">Confirm donation</button>
+
+          <button type="submit" className="w-full inline-flex items-center justify-center rounded-full bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700">
+            Confirm donation
+          </button>
         </form>
       </div>
+
+      {/* Sidebar - updates correctly for both campaigns and events */}
       <aside className="space-y-4">
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-4 text-xs">
           <p className="text-[11px] text-gray-500 mb-1">You are supporting</p>
           <p className="text-sm font-semibold text-gray-900 mb-1">{currentCampaign.title}</p>
-          <p className="text-[11px] text-blue-600 mb-3">{currentCampaign.category}</p>
-          <div className="mb-2">
-            <div className="flex justify-between text-[11px] text-gray-500 mb-1">
-              <span>{formatCurrency(currentRaised)} raised</span>
-              <span>{formatCurrency(currentCampaign.target)} goal</span>
-            </div>
-            <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-              <div className="h-2 bg-blue-500 rounded-full" style={{ width: `${currentPercent}%` }} />
-            </div>
-            <p className="mt-1 text-[11px] text-gray-500">{daysLeft(currentCampaign.endDate)}</p>
-          </div>
+
+          {isEvent ? (
+            // Event sidebar info
+            <>
+              <span className="inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 mb-3">
+                📅 Event
+              </span>
+              {currentCampaign.date && (
+                <p className="text-[11px] text-gray-500 mb-1">
+                  📅 {new Date(currentCampaign.date).toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' })}
+                </p>
+              )}
+              {currentCampaign.goal > 0 && (
+                <>
+                  <div className="flex justify-between text-[11px] text-gray-500 mb-1 mt-2">
+                    <span>Fundraising goal</span>
+                    <span>{formatCurrency(currentCampaign.goal)}</span>
+                  </div>
+                  <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="h-2 bg-purple-400 rounded-full" style={{ width: '0%' }} />
+                  </div>
+                </>
+              )}
+            </>
+          ) : (
+            // Campaign sidebar info
+            <>
+              <p className="text-[11px] text-blue-600 mb-3">{currentCampaign.category}</p>
+              <div className="mb-2">
+                <div className="flex justify-between text-[11px] text-gray-500 mb-1">
+                  <span>{formatCurrency(currentRaised)} raised</span>
+                  <span>{formatCurrency(currentCampaign.target)} goal</span>
+                </div>
+                <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-2 bg-blue-500 rounded-full" style={{ width: `${currentPercent}%` }} />
+                </div>
+                <p className="mt-1 text-[11px] text-gray-500">{daysLeft(currentCampaign.endDate)}</p>
+              </div>
+            </>
+          )}
         </div>
+
         <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-xs text-blue-900">
           <p className="font-semibold mb-1">Why give monthly?</p>
           <p>Monthly support helps sustain long-term programs and reach more learners throughout the school year.</p>
@@ -1062,7 +1391,6 @@ export function DonationPage({ selectedCampaignId, onSubmit, onBackToCampaign })
     </div>
   )
 }
-
 export function ThankYouPage({ donation, onBackHome, onViewCampaign }) {
   if (!donation) return null
   return (
