@@ -338,82 +338,136 @@ export function Donors() {
         onClose={() => setIsModalOpen(false)}
         title={currentDonor ? 'Edit Record' : 'Add New Record'}
       >
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
+
+          {/* Section Card */}
+          <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200 space-y-4">
+
+            {/* Name of Sponsor */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Project</label>
-              <Input name="project" defaultValue={currentDonor?.project} placeholder="e.g. 1ACCESS" required />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
-              <Input name="email" type="email" defaultValue={currentDonor?.email || ''} placeholder="e.g. sponsor@email.com" />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Project Description</label>
-            <Input name="description" defaultValue={currentDonor?.description} placeholder="e.g. KTV in Lian Batangas..." required />
-          </div>
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">No. of Schools / PMLs</label>
-              <Input name="units" type="number" defaultValue={currentDonor?.units ?? 0} placeholder="e.g. 1" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Delivery Date</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                Name of Sponsor
+              </label>
               <Input
-                name="deliveryDate"
-                type="date"
-                defaultValue={formatDate(currentDonor?.deliveryDate) === '-' ? '' : formatDate(currentDonor?.deliveryDate)}
+                name="sponsor"
+                defaultValue={currentDonor?.sponsor}
+                placeholder="Enter sponsor name"
+                className="w-full"
+                required
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Due Date</label>
-              <Input
-                name="dueDate"
-                type="date"
-                defaultValue={formatDate(currentDonor?.dueDate) === '-' ? '' : formatDate(currentDonor?.dueDate)}
-              />
+
+            {/* Contact + Email */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Contact Number
+                </label>
+                <Input
+                  name="contact"
+                  placeholder="e.g. 09123456789"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Email
+                </label>
+                <Input
+                  name="email"
+                  type="email"
+                  defaultValue={currentDonor?.email}
+                  placeholder="example@email.com"
+                />
+              </div>
             </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Sponsor</label>
-            <Input name="sponsor" defaultValue={currentDonor?.sponsor} placeholder="e.g. EMAR CORP." required />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
+
+            {/* Program */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Amount</label>
-              <Input name="amount" type="number" defaultValue={currentDonor?.amount ?? 0} placeholder="e.g. 150000" required />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Type</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                Program
+              </label>
               <Select
-                name="type"
-                defaultValue={currentDonor?.type || 'Individual'}
+                name="project"
+                defaultValue={currentDonor?.project}
                 options={[
-                  { label: 'Individual', value: 'Individual' },
-                  { label: 'Corporate', value: 'Corporate' },
-                  { label: 'Organization', value: 'Organization' },
+                  { label: 'Video Production', value: 'Video Production' },
+                  { label: 'Knowledge Channel TV Package (KCTV)', value: 'KCTV' },
+                  { label: 'Knowledge Portable Media Library (KCPML)', value: 'KCPML' },
+                  { label: 'Teacher Training', value: 'Teacher Training' },
+                  { label: 'Others', value: 'Others' },
                 ]}
               />
             </div>
+
+            {/* Beneficiaries + Date */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Number of Beneficiaries
+                </label>
+                <Input
+                  name="units"
+                  type="number"
+                  defaultValue={currentDonor?.units}
+                  placeholder="Enter number"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Date of Payment
+                </label>
+                <Input
+                  name="deliveryDate"
+                  type="date"
+                  defaultValue={currentDonor?.deliveryDate}
+                />
+              </div>
+            </div>
+
+            {/* Tranches + Source */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Number of Tranches
+                </label>
+                <Input
+                  name="tranches"
+                  type="number"
+                  placeholder="Enter number"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Source of Funds
+                </label>
+                <Select
+                  name="type"
+                  defaultValue={currentDonor?.type}
+                  options={[
+                    { label: 'Government', value: 'Government' },
+                    { label: 'Corporate', value: 'Corporate' },
+                    { label: 'Individual', value: 'Individual' },
+                    { label: 'NGOs', value: 'NGOs' },
+                    { label: 'Grants', value: 'Grants' },
+                    { label: 'Others', value: 'Others' },
+                  ]}
+                />
+              </div>
+            </div>
+
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Status</label>
-            <Select
-              name="status"
-              defaultValue={normalizeStatus(currentDonor?.status || 'Active')}
-              options={[
-                { label: 'Active', value: 'Active' },
-                { label: 'Inactive', value: 'Inactive' },
-                { label: 'Completed', value: 'Completed' },
-                { label: 'Done', value: 'Done' },
-              ]}
-            />
-          </div>
-          <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
-            <Button variant="secondary" type="button" onClick={() => setIsModalOpen(false)}>Cancel</Button>
+
+          {/* Buttons */}
+          <div className="flex justify-end gap-3">
+            <Button variant="secondary" type="button" onClick={() => setIsModalOpen(false)}>
+              Cancel
+            </Button>
             <Button type="submit">Save Record</Button>
           </div>
+
         </form>
       </Modal>
 
