@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../config/db');
+const { requireAuth } = require('../middleware/auth');
+
+router.use(requireAuth);
 
 // ── GET all donors — join campaign title ──────────────────────────────────────
 router.get('/', async (req, res) => {
@@ -46,26 +49,29 @@ router.post('/', async (req, res) => {
       });
     }
 
+    const createdBy = req.user?.email || null; // 👈 get logged-in admin's email
+
     const sql = `
       INSERT INTO donors
-        (project, description, units, deliveryDate, dueDate, sponsor, amount, type, status, email, contact, tranches, campaign_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (project, description, units, deliveryDate, dueDate, sponsor, amount, type, status, email, contact, tranches, campaign_id, created_by)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const values = [
-      project       || null,
-      description   || null,
-      Number(units  || 0),
-      deliveryDate  || null,
-      dueDate       || null,
+      project      || null,
+      description  || null,
+      Number(units || 0),
+      deliveryDate || null,
+      dueDate      || null,
       sponsor,
       Number(amount || 0),
       type,
       status,
-      email         || null,
-      contact       || null,
+      email        || null,
+      contact      || null,
       Number(tranches || 0),
       campaign_id ? Number(campaign_id) : null,
+      createdBy,   // 👈 added
     ];
 
     const [result] = await db.query(sql, values);
@@ -85,6 +91,7 @@ router.post('/', async (req, res) => {
       contact:      contact      || null,
       tranches:     Number(tranches || 0),
       campaign_id:  campaign_id ? Number(campaign_id) : null,
+      created_by:   createdBy,   // 👈 added
     });
   } catch (err) {
     console.error('POST /api/donors error:', err);
@@ -128,24 +135,26 @@ router.put('/:id', async (req, res) => {
         email        = ?,
         contact      = ?,
         tranches     = ?,
-        campaign_id  = ?
+        campaign_id  = ?,
+        created_by   = COALESCE(created_by, ?)
       WHERE id = ?
     `;
 
     const values = [
-      project       || null,
-      description   || null,
-      Number(units  || 0),
-      deliveryDate  || null,
-      dueDate       || null,
+      project      || null,
+      description  || null,
+      Number(units || 0),
+      deliveryDate || null,
+      dueDate      || null,
       sponsor,
       Number(amount || 0),
       type,
       status,
-      email         || null,
-      contact       || null,
+      email        || null,
+      contact      || null,
       Number(tranches || 0),
       campaign_id ? Number(campaign_id) : null,
+      req.user?.email || null,  // 👈 added
       id,
     ];
 

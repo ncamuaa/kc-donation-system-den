@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card'
 import { Badge } from '../components/ui/Badge';
 import { useData } from '../context/DataContext';
 import jsPDF from 'jspdf';
+import kcLogo from '../assets/1.png';
 
 const defaultTemplates = [
   { id: 1, name: 'Donation Thank You', subject: 'Thank you for your generous donation!', body: 'Dear [Donor Name],\n\nThank you so much for your generous donation of [Amount] to [Campaign Name]. Your support makes a real difference in the lives of Filipino learners.\n\nWith gratitude,\nKnowledge Channel Foundation', lastEdited: '2 days ago' },
@@ -37,142 +38,237 @@ function BillingStatementModal({ donors, onClose }) {
     return d.toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' });
   };
 
-  const handleGeneratePDF = () => {
-    if (!selectedDonor) return;
+const handleGeneratePDF = () => {
+  if (!selectedDonor) return;
 
-    const doc = new jsPDF();
-    const pageW = doc.internal.pageSize.getWidth();
+  const doc = new jsPDF();
+  const pageW = doc.internal.pageSize.getWidth();
 
-    // ── Header ──
-    doc.setFillColor(15, 76, 129);
-    doc.rect(0, 0, pageW, 38, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(18);
-    doc.setFont('helvetica', 'bold');
-    doc.text('BILLING STATEMENT', 20, 18);
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    doc.text('Knowledge Channel Foundation', 20, 26);
-    doc.text('Quezon City, Metro Manila, Philippines', 20, 32);
+  // ── Thin top accent bar ──
+  doc.setFillColor(230, 126, 0);
+  doc.rect(0, 0, pageW, 3, 'F');
 
-    // Statement No + Date (top right)
-    const stmtNo = `BS-${Date.now().toString().slice(-6)}`;
-    doc.setFontSize(9);
-    doc.text(`Statement No: ${stmtNo}`, pageW - 20, 18, { align: 'right' });
-    doc.text(`Date: ${formatDate(statementDate)}`, pageW - 20, 26, { align: 'right' });
+  // ── Clean white header ──
+  doc.setFillColor(255, 255, 255);
+  doc.rect(0, 3, pageW, 36, 'F');
 
-    // ── Bill To ──
-    doc.setTextColor(30, 30, 30);
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.text('BILL TO', 20, 52);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-    doc.text(selectedDonor.sponsor || '—', 20, 60);
-    if (selectedDonor.email) doc.text(selectedDonor.email, 20, 67);
-    if (selectedDonor.contact) doc.text(selectedDonor.contact, 20, 74);
+  // ── Small logo ──
+  doc.addImage(kcLogo, 'PNG', 12, 7, 22, 22);
 
-    // ── Divider ──
-    doc.setDrawColor(200, 200, 200);
-    doc.line(20, 82, pageW - 20, 82);
+  // ── Title beside logo ──
+  doc.setTextColor(20, 20, 20);
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.text('BILLING STATEMENT', 38, 16);
 
-    // ── Table Header ──
-    doc.setFillColor(240, 245, 255);
-    doc.rect(20, 85, pageW - 40, 9, 'F');
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9);
-    doc.setTextColor(50, 80, 130);
-    doc.text('DESCRIPTION', 22, 92);
-    doc.text('PROGRAM', 90, 92);
-    doc.text('DUE DATE', 135, 92);
-    doc.text('AMOUNT', pageW - 22, 92, { align: 'right' });
+  doc.setFontSize(7.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(100, 100, 100);
+  doc.text('Knowledge Channel Foundation, Inc.', 38, 22);
+  doc.text('Congressional Ave., Quezon City, Metro Manila', 38, 27);
+  doc.text('finance@knowledgechannel.org', 38, 32);
 
-    // ── Table Row ──
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(30, 30, 30);
-    doc.setFontSize(10);
+  // ── Statement info (right side) ──
+  const stmtNo = `BS-${Date.now().toString().slice(-6)}`;
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(100, 100, 100);
+  doc.text('Statement No.', pageW - 14, 13, { align: 'right' });
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(20, 20, 20);
+  doc.setFontSize(9);
+  doc.text(stmtNo, pageW - 14, 19, { align: 'right' });
 
-    const desc = selectedDonor.description
-      ? doc.splitTextToSize(selectedDonor.description, 60)
-      : ['—'];
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(100, 100, 100);
+  doc.text('Date', pageW - 14, 27, { align: 'right' });
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(20, 20, 20);
+  doc.setFontSize(9);
+  doc.text(formatDate(statementDate), pageW - 14, 33, { align: 'right' });
 
-    doc.text(desc, 22, 103);
-    doc.text(selectedDonor.project || '—', 90, 103);
-    doc.text(formatDate(selectedDonor.dueDate), 135, 103);
-    doc.setFont('helvetica', 'bold');
-    doc.text(`PHP ${Number(selectedDonor.amount || 0).toLocaleString()}`, pageW - 22, 103, { align: 'right' });
+  // ── Bottom header divider ──
+  doc.setFillColor(255, 193, 7);
+  doc.rect(0, 39, pageW, 2, 'F');
+  doc.setFillColor(230, 126, 0);
+  doc.rect(0, 41, pageW, 1, 'F');
 
-    // Tranches info
-    if (selectedDonor.tranches && Number(selectedDonor.tranches) > 0) {
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9);
-      doc.setTextColor(100, 100, 100);
-      const perTranche = Math.round(Number(selectedDonor.amount || 0) / Number(selectedDonor.tranches));
-      doc.text(`(${selectedDonor.tranches} tranche${selectedDonor.tranches > 1 ? 's' : ''} · PHP ${perTranche.toLocaleString()} each)`, 22, 113);
-    }
+  // ── Bill To ──
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(180, 100, 0);
+  doc.text('BILL TO', 14, 52);
+  doc.setDrawColor(230, 126, 0);
+  doc.setLineWidth(0.4);
+  doc.line(14, 54, 38, 54);
+  doc.setLineWidth(0.2);
 
-    // ── Divider ──
-    doc.setDrawColor(200, 200, 200);
-    doc.line(20, 122, pageW - 20, 122);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(20, 20, 20);
+  doc.text(selectedDonor.sponsor || '—', 14, 62);
 
-    // ── Totals ──
-    doc.setFontSize(10);
-    doc.setTextColor(30, 30, 30);
-    doc.setFont('helvetica', 'normal');
-    doc.text('Subtotal:', pageW - 65, 132);
-    doc.text(`PHP ${Number(selectedDonor.amount || 0).toLocaleString()}`, pageW - 22, 132, { align: 'right' });
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(80, 80, 80);
+  let billY = 69;
+  if (selectedDonor.email)   { doc.text(selectedDonor.email,   14, billY); billY += 6; }
+  if (selectedDonor.contact) { doc.text(selectedDonor.contact, 14, billY); }
 
-    doc.setFillColor(15, 76, 129);
-    doc.rect(pageW - 80, 137, 60, 10, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10);
-    doc.text('TOTAL DUE:', pageW - 78, 144);
-    doc.text(`PHP ${Number(selectedDonor.amount || 0).toLocaleString()}`, pageW - 22, 144, { align: 'right' });
+  // ── Table Header ──
+  doc.setFillColor(255, 193, 7);
+  doc.rect(14, 82, pageW - 28, 8, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.5);
+  doc.setTextColor(80, 40, 0);
+  doc.text('DESCRIPTION', 17, 87.5);
+  doc.text('PROGRAM',     88, 87.5);
+  doc.text('DUE DATE',   130, 87.5);
+  doc.text('AMOUNT', pageW - 16, 87.5, { align: 'right' });
 
-    // ── Payment Details ──
-    doc.setTextColor(30, 30, 30);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10);
-    doc.text('PAYMENT DETAILS', 20, 160);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(80, 80, 80);
-    doc.text('Bank: BDO Unibank, Inc.', 20, 168);
-    doc.text('Account Name: Knowledge Channel Foundation, Inc.', 20, 175);
-    doc.text('Account Number: 003-480-3865', 20, 182);
-    doc.text(`Payment Due: ${formatDate(selectedDonor.dueDate)}`, 20, 189);
+  // ── Table Row ──
+  doc.setFillColor(255, 252, 240);
+  doc.rect(14, 90, pageW - 28, 16, 'F');
+  doc.setDrawColor(240, 200, 100);
+  doc.rect(14, 90, pageW - 28, 16, 'S');
 
-    if (selectedDonor.deliveryDate) {
-      doc.text(`Date of Payment Recorded: ${formatDate(selectedDonor.deliveryDate)}`, 20, 196);
-    }
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(20, 20, 20);
+  const desc = selectedDonor.description
+    ? doc.splitTextToSize(selectedDonor.description, 65)
+    : ['—'];
+  doc.text(desc, 17, 97);
+  doc.text(selectedDonor.project || '—', 88, 97);
+  doc.text(formatDate(selectedDonor.dueDate), 130, 97);
+  doc.setFont('helvetica', 'bold');
+  doc.text(
+    `PHP ${Number(selectedDonor.amount || 0).toLocaleString()}`,
+    pageW - 16, 97, { align: 'right' }
+  );
 
-    // ── Notes ──
-    if (notes.trim()) {
-      doc.setDrawColor(200, 200, 200);
-      doc.line(20, 205, pageW - 20, 205);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(9);
-      doc.setTextColor(50, 50, 50);
-      doc.text('NOTES', 20, 213);
-      doc.setFont('helvetica', 'normal');
-      const noteLines = doc.splitTextToSize(notes, pageW - 40);
-      doc.text(noteLines, 20, 220);
-    }
-
-    // ── Footer ──
-    doc.setFillColor(240, 240, 240);
-    doc.rect(0, 275, pageW, 22, 'F');
+  if (selectedDonor.tranches && Number(selectedDonor.tranches) > 0) {
     doc.setFont('helvetica', 'italic');
-    doc.setFontSize(8);
-    doc.setTextColor(120, 120, 120);
-    doc.text('Thank you for your generous support. For inquiries, contact finance@knowledgechannel.org', pageW / 2, 285, { align: 'center' });
-    doc.text('Knowledge Channel Foundation · www.knowledgechannel.org', pageW / 2, 291, { align: 'center' });
+    doc.setFontSize(7.5);
+    doc.setTextColor(130, 80, 0);
+    const perTranche = Math.round(
+      Number(selectedDonor.amount || 0) / Number(selectedDonor.tranches)
+    );
+    doc.text(
+      `${selectedDonor.tranches} tranche${selectedDonor.tranches > 1 ? 's' : ''} · PHP ${perTranche.toLocaleString()} each`,
+      17, 103
+    );
+  }
 
-    const safeName = String(selectedDonor.sponsor || 'sponsor').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    doc.save(`billing-statement-${safeName}-${stmtNo}.pdf`);
-    setGenerated(true);
-  };
+  // ── Divider ──
+  doc.setDrawColor(220, 180, 60);
+  doc.setLineWidth(0.3);
+  doc.line(14, 112, pageW - 14, 112);
+  doc.setLineWidth(0.2);
+
+  // ── Subtotal ──
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(80, 80, 80);
+  doc.text('Subtotal:', pageW - 55, 121);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(20, 20, 20);
+  doc.text(
+    `PHP ${Number(selectedDonor.amount || 0).toLocaleString()}`,
+    pageW - 16, 121, { align: 'right' }
+  );
+
+  // ── Total Due box ──
+  doc.setFillColor(230, 126, 0);
+  doc.roundedRect(pageW - 78, 125, 64, 11, 2, 2, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.text('TOTAL DUE:', pageW - 76, 132);
+  doc.text(
+    `PHP ${Number(selectedDonor.amount || 0).toLocaleString()}`,
+    pageW - 16, 132, { align: 'right' }
+  );
+
+  // ── Payment Details box ──
+  doc.setFillColor(252, 252, 252);
+  doc.roundedRect(14, 142, pageW - 28, 50, 2, 2, 'F');
+  doc.setDrawColor(230, 200, 100);
+  doc.roundedRect(14, 142, pageW - 28, 50, 2, 2, 'S');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.setTextColor(180, 100, 0);
+  doc.text('PAYMENT DETAILS', 20, 151);
+  doc.setDrawColor(230, 126, 0);
+  doc.setLineWidth(0.4);
+  doc.line(20, 153, 64, 153);
+  doc.setLineWidth(0.2);
+
+  const pdRows = [
+    ['Bank',         'BDO Unibank, Inc.'],
+    ['Account Name', 'Knowledge Channel Foundation, Inc.'],
+    ['Account No.',  '003-480-3865'],
+    ['Payment Due',  formatDate(selectedDonor.dueDate)],
+    ...(selectedDonor.deliveryDate
+      ? [['Date Paid', formatDate(selectedDonor.deliveryDate)]]
+      : []),
+  ];
+
+  let pdY = 161;
+  pdRows.forEach(([label, value]) => {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`${label}:`, 20, pdY);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(20, 20, 20);
+    doc.text(value, 58, pdY);
+    pdY += 7;
+  });
+
+  // ── Notes ──
+  if (notes.trim()) {
+    const notesY = 200;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(180, 100, 0);
+    doc.text('NOTES', 14, notesY);
+    doc.setDrawColor(230, 126, 0);
+    doc.setLineWidth(0.4);
+    doc.line(14, notesY + 2, 32, notesY + 2);
+    doc.setLineWidth(0.2);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(60, 60, 60);
+    const noteLines = doc.splitTextToSize(notes, pageW - 28);
+    doc.text(noteLines, 14, notesY + 9);
+  }
+
+  // ── Footer ──
+  doc.setFillColor(230, 126, 0);
+  doc.rect(0, 278, pageW, 1.5, 'F');
+  doc.setFillColor(255, 193, 7);
+  doc.rect(0, 279.5, pageW, 18, 'F');
+  doc.setFont('helvetica', 'italic');
+  doc.setFontSize(7.5);
+  doc.setTextColor(80, 40, 0);
+  doc.text(
+    'Thank you for your generous support of quality education for every Filipino child.',
+    pageW / 2, 287, { align: 'center' }
+  );
+  doc.text(
+    'Knowledge Channel Foundation  ·  finance@knowledgechannel.org  ·  www.knowledgechannel.org',
+    pageW / 2, 293, { align: 'center' }
+  );
+
+  const safeName = String(selectedDonor.sponsor || 'sponsor')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-');
+  doc.save(`billing-statement-${safeName}-${stmtNo}.pdf`);
+  setGenerated(true);
+};
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">

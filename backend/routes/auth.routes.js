@@ -33,7 +33,7 @@ router.post('/login', async (req, res) => {
       return res.status(500).json({ message: 'Server configuration error.' });
     }
 
-    const token = jwt.sign(
+  const token = jwt.sign(
       { id: admin.id, email: admin.email, role: admin.role },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }

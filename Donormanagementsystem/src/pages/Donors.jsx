@@ -626,12 +626,13 @@ export function Donors() {
 
                   <div className="grid grid-cols-2 gap-3">
                     {[
-                      { label: 'Type',           value: currentDonor.type },
-                      { label: 'Schools / PMLs', value: currentDonor.units ?? '—' },
-                      { label: 'Payment Date',   value: formatDate(currentDonor.deliveryDate) },
-                      { label: 'Due Date',        value: formatDate(currentDonor.dueDate) },
-                      { label: 'Tranches',        value: currentDonor.tranches ?? '—' },
-                    ].map(({ label, value }) => (
+  { label: 'Type',           value: currentDonor.type },
+  { label: 'Schools / PMLs', value: currentDonor.units ?? '—' },
+  { label: 'Payment Date',   value: formatDate(currentDonor.deliveryDate) },
+  { label: 'Due Date',       value: formatDate(currentDonor.dueDate) },
+  { label: 'Tranches',       value: currentDonor.tranches ?? '—' },
+  { label: 'Added By',       value: currentDonor.created_by ?? '—' }, // 👈
+].map(({ label, value }) => (
                       <div key={label} className="p-3.5 bg-white rounded-xl border border-gray-200 shadow-sm">
                         <p className="text-[10px] text-gray-500 uppercase font-semibold tracking-wide mb-1">{label}</p>
                         <p className="text-sm font-semibold text-gray-900">{value}</p>
