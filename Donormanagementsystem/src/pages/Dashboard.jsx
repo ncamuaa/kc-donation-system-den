@@ -4,7 +4,7 @@ import {
   AreaChart, Area, PieChart, Pie, Cell
 } from 'recharts';
 import {
-  ArrowUpRight, Users, DollarSign, Megaphone, Activity, Clock, ChevronRight, CheckCircle
+  ArrowUpRight, Users, Megaphone, Activity, Clock, ChevronRight, CheckCircle
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { useData } from '../context/DataContext';
@@ -54,14 +54,14 @@ export function Dashboard() {
   );
 
   const stats = [
-    {
-      title: 'Total Sponsorship Amount',
-      value: `₱${totalAmount.toLocaleString()}`,
-      change: `${donors.length} total records`,
-      icon: DollarSign,
-      color: 'bg-green-50 text-green-600',
-      border: 'border-l-4 border-l-green-500',
-    },
+   {
+  title: 'Total Sponsorship Amount',
+  value: `₱${totalAmount.toLocaleString()}`,
+  change: `${donors.length} total records`,
+  icon: () => <span className="text-lg font-bold leading-none">₱</span>,
+  color: 'bg-green-50 text-green-600',
+  border: 'border-l-4 border-l-green-500',
+},
     {
       title: 'Active Sponsorships',
       value: activeCount.toString(),

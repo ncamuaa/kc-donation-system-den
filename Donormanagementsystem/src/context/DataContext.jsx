@@ -70,28 +70,37 @@ export const DataProvider = ({ children }) => {
     } catch (err) { console.error(err); alert("Failed to delete record."); }
   };
 
-  // Save a snapshot of the donor BEFORE an edit (called from Donors.jsx)
+  // ── Save a snapshot BEFORE an edit ────────────────────────────────────────
+  // No try/catch — errors will surface visibly so they are not silently swallowed.
   const saveDonorSnapshot = async (donorId, snapshot) => {
-    try {
-      const token = getToken();
-      const res = await fetch(`${API_BASE}/donors/${donorId}/history`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify(snapshot),
-      });
-      if (!res.ok) throw new Error(`Save snapshot failed: ${res.status}`);
-    } catch (err) {
-      // Non-fatal — log but don't block the save
-      console.error("saveDonorSnapshot error:", err);
+    const tok = getToken();
+
+    console.log("▶️ saveDonorSnapshot — donorId:", donorId, "snapshot:", snapshot);
+
+    const res = await fetch(`${API_BASE}/donors/${donorId}/history`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${tok}`,
+      },
+      body: JSON.stringify(snapshot),
+    });
+
+    const text = await res.text();
+    console.log("📦 snapshot response:", res.status, text);
+
+    if (!res.ok) {
+      console.error("❌ saveDonorSnapshot failed:", res.status, text);
+      // Still non-fatal — don't block the save, but log clearly
     }
   };
 
-  // Fetch full edit history for a single donor
+  // ── Fetch full edit history for a single donor ─────────────────────────────
   const fetchDonorHistory = async (donorId) => {
     try {
-      const token = getToken();
+      const tok = getToken();
       const res = await fetch(`${API_BASE}/donors/${donorId}/history`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${tok}` },
       });
       if (!res.ok) throw new Error(`Fetch donor history failed: ${res.status}`);
       return await res.json();
@@ -101,13 +110,12 @@ export const DataProvider = ({ children }) => {
     }
   };
 
-  // Fetch donors linked to a campaign via the dedicated backend endpoint
-  // Uses GET /api/campaigns/:id/donors (added in campaigns.js router)
+  // ── Fetch donors linked to a campaign ─────────────────────────────────────
   const fetchCampaignDonors = async (campaignId) => {
     try {
-      const token = getToken();
+      const tok = getToken();
       const res = await fetch(`${API_BASE}/campaigns/${campaignId}/donors`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${tok}` },
       });
       if (!res.ok) throw new Error(`Fetch campaign donors failed: ${res.status}`);
       return await res.json();
@@ -521,45 +529,44 @@ export const DataProvider = ({ children }) => {
     fetchContactMessages();
   }, [token]);
 
+  const value = useMemo(
+    () => ({
+      donors, campaigns, events, grants, causeMarketing, donations,
+      commTemplates, commWorkflows, commHistory,
+      contactMessages,
 
-const value = useMemo(
-  () => ({
-    donors, campaigns, events, grants, causeMarketing, donations,
-    commTemplates, commWorkflows, commHistory,
-    contactMessages,
+      getCampaignDonorTotal: (campaignId) =>
+        donors
+          .filter((d) => String(d.campaign_id) === String(campaignId))
+          .reduce((sum, d) => sum + Number(d.amount || 0), 0),
 
-    getCampaignDonorTotal: (campaignId) =>
-      donors
-        .filter((d) => String(d.campaign_id) === String(campaignId))
-        .reduce((sum, d) => sum + Number(d.amount || 0), 0),
+      getDonorTotal: (donorName) =>
+        donations
+          .filter((d) => d.donor === donorName && d.status === "Completed")
+          .reduce((sum, d) => sum + d.amount, 0),
 
-    getDonorTotal: (donorName) =>
-      donations
-        .filter((d) => d.donor === donorName && d.status === "Completed")
-        .reduce((sum, d) => sum + d.amount, 0),
+      getCampaignRaised: (campaignTitle) =>
+        donations
+          .filter((d) => d.campaign === campaignTitle && d.status === "Completed")
+          .reduce((sum, d) => sum + d.amount, 0),
 
-    getCampaignRaised: (campaignTitle) =>
-      donations
-        .filter((d) => d.campaign === campaignTitle && d.status === "Completed")
-        .reduce((sum, d) => sum + d.amount, 0),
-
-    fetchDonors, addDonor, updateDonor, deleteDonor,
-    saveDonorSnapshot, fetchDonorHistory,
-    fetchCampaignDonors,
-    fetchCampaigns, addCampaign, updateCampaign, deleteCampaign,
-    fetchEvents, addEvent, updateEvent, deleteEvent,
-    addCampaignEvent, updateCampaignEvent, deleteCampaignEvent,
-    fetchGrants, addGrant, updateGrant, deleteGrant,
-    fetchCauseMarketing, addCauseMarketing, updateCauseMarketing, deleteCauseMarketing,
-    fetchDonations, addDonation, updateDonation, deleteDonation,
-    fetchCommTemplates, addCommTemplate, updateCommTemplate, deleteCommTemplate,
-    fetchCommWorkflows, updateCommWorkflow,
-    fetchCommHistory,
-    fetchContactMessages, markMessageRead, deleteContactMessage,
-  }),
-  [donors, campaigns, events, grants, causeMarketing, donations,
-   commTemplates, commWorkflows, commHistory, contactMessages]
-);
+      fetchDonors, addDonor, updateDonor, deleteDonor,
+      saveDonorSnapshot, fetchDonorHistory,
+      fetchCampaignDonors,
+      fetchCampaigns, addCampaign, updateCampaign, deleteCampaign,
+      fetchEvents, addEvent, updateEvent, deleteEvent,
+      addCampaignEvent, updateCampaignEvent, deleteCampaignEvent,
+      fetchGrants, addGrant, updateGrant, deleteGrant,
+      fetchCauseMarketing, addCauseMarketing, updateCauseMarketing, deleteCauseMarketing,
+      fetchDonations, addDonation, updateDonation, deleteDonation,
+      fetchCommTemplates, addCommTemplate, updateCommTemplate, deleteCommTemplate,
+      fetchCommWorkflows, updateCommWorkflow,
+      fetchCommHistory,
+      fetchContactMessages, markMessageRead, deleteContactMessage,
+    }),
+    [donors, campaigns, events, grants, causeMarketing, donations,
+     commTemplates, commWorkflows, commHistory, contactMessages]
+  );
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 };

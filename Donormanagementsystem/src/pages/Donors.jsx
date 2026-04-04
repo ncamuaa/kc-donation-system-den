@@ -9,10 +9,10 @@ import { Select } from '../components/ui/Select';
 import { useData } from '../context/DataContext';
 import jsPDF from 'jspdf';
 import { useLocation, useNavigate } from 'react-router-dom';
+import kcLogo from '../assets/1.png';
 
 const PAGE_SIZE = 10;
 
-// ── Blank form state ──────────────────────────────────────────────────────────
 const blankForm = {
   sponsor: '',
   contact: '',
@@ -49,11 +49,9 @@ export function Donors() {
   const [profileTab, setProfileTab] = useState('details');
   const [donorHistory, setDonorHistory] = useState([]);
 
-  // ── Controlled form state ─────────────────────────────────────────────────
   const [form, setForm] = useState(blankForm);
   const setField = (field) => (e) => setForm((prev) => ({ ...prev, [field]: e.target.value }));
 
-  // ── Helpers ────────────────────────────────────────────────────────────────
   const formatDate = (val) => {
     if (!val) return '-';
     const d = new Date(val);
@@ -89,7 +87,6 @@ export function Donors() {
     return (campaigns || []).find((c) => String(c.id) === String(donor.campaign_id)) || null;
   };
 
-  // ── Effects ────────────────────────────────────────────────────────────────
   useEffect(() => {
     const openDonorId = location.state?.openDonorId;
     if (!openDonorId) return;
@@ -99,7 +96,6 @@ export function Donors() {
 
   useEffect(() => { setCurrentPage(1); }, [searchTerm, typeFilter]);
 
-  // ── Filtering & grouping ───────────────────────────────────────────────────
   const filteredDonors = donors.filter((row) => {
     const s = searchTerm.toLowerCase();
     const linkedCampaign = getLinkedCampaign(row);
@@ -130,7 +126,6 @@ export function Donors() {
   const toggleGroup = (name) =>
     setCollapsedGroups((prev) => ({ ...prev, [name]: !prev[name] }));
 
-  // ── Actions ────────────────────────────────────────────────────────────────
   const handleViewProfile = async (donor) => {
     setCurrentDonor(donor);
     setProfileTab('details');
@@ -148,7 +143,6 @@ export function Donors() {
 
   const handleEditDonor = (donor) => {
     setCurrentDonor(donor);
-    // Populate form with existing donor values
     setForm({
       sponsor:      donor.sponsor      || '',
       contact:      donor.contact      || '',
@@ -164,6 +158,8 @@ export function Donors() {
       status:       normalizeStatus(donor.status),
       description:  donor.description  || '',
     });
+    // Pre-load history so the History tab is ready if the user opens the profile after saving
+    fetchDonorHistory(donor.id).then(setDonorHistory);
     setIsModalOpen(true);
   };
 
@@ -197,70 +193,306 @@ export function Donors() {
     };
 
     if (currentDonor) {
-      // Save snapshot only if something actually changed
-      const prevFields = {
-        project: currentDonor.project, description: currentDonor.description,
-        units: currentDonor.units, deliveryDate: currentDonor.deliveryDate,
-        dueDate: currentDonor.dueDate, sponsor: currentDonor.sponsor,
-        amount: currentDonor.amount, type: currentDonor.type,
-        status: currentDonor.status, email: currentDonor.email,
-        contact: currentDonor.contact, tranches: currentDonor.tranches,
-        campaign_id: currentDonor.campaign_id,
-      };
-      const newFields = {
-        project: newDonor.project, description: newDonor.description,
-        units: newDonor.units, deliveryDate: newDonor.deliveryDate,
-        dueDate: newDonor.dueDate, sponsor: newDonor.sponsor,
-        amount: newDonor.amount, type: newDonor.type,
-        status: newDonor.status, email: newDonor.email,
-        contact: newDonor.contact, tranches: newDonor.tranches,
-        campaign_id: newDonor.campaign_id,
-      };
-      if (JSON.stringify(prevFields) !== JSON.stringify(newFields)) {
-        await saveDonorSnapshot(currentDonor.id, { ...currentDonor });
-      }
-      updateDonor(newDonor);
+      // Always save a snapshot of the PREVIOUS state before updating.
+      // No JSON comparison — we never skip this, so history always reflects every save.
+      await saveDonorSnapshot(currentDonor.id, { ...currentDonor });
+      await updateDonor(newDonor);
+
+      // Refresh history state so the History tab shows the new entry immediately
+      const updated = await fetchDonorHistory(currentDonor.id);
+      setDonorHistory(updated);
+
+      // Keep currentDonor in sync so the profile modal shows fresh data if open
+      setCurrentDonor((prev) => ({ ...prev, ...newDonor }));
     } else {
-      addDonor(newDonor);
+      await addDonor(newDonor);
     }
+
     setIsModalOpen(false);
   };
 
-  const handleDownloadSummary = () => {
-    if (!currentDonor) return;
-    const linkedCampaign = getLinkedCampaign(currentDonor);
-    const doc = new jsPDF();
-    doc.setFontSize(16);
-    doc.text('Sponsorship Record Summary', 105, 20, { align: 'center' });
-    doc.setFontSize(11);
-    doc.text(`Project: ${currentDonor.project || '-'}`, 20, 35);
-    doc.text(`Sponsor: ${currentDonor.sponsor || '-'}`, 20, 42);
-    doc.text(`Email: ${currentDonor.email || '-'}`, 20, 49);
-    doc.text(`Type: ${currentDonor.type || '-'}`, 20, 56);
-    doc.text(`Units (Schools/PMLs): ${currentDonor.units ?? '-'}`, 20, 63);
-    doc.text(`Delivery Date: ${formatDate(currentDonor.deliveryDate)}`, 20, 70);
-    doc.text(`Due Date: ${formatDate(currentDonor.dueDate)}`, 20, 77);
-    if (linkedCampaign) doc.text(`Linked Campaign: ${linkedCampaign.title}`, 20, 84);
-    doc.setFontSize(12);
-    doc.text(`Amount: ₱${Number(currentDonor.amount || 0).toLocaleString()}`, 20, 91);
-    doc.setFontSize(11);
-    doc.text('Project Description:', 20, 106);
-    const lines = doc.splitTextToSize(String(currentDonor.description || '-'), 170);
-    doc.text(lines, 20, 114);
-    const fileSafeName = String(currentDonor.project || currentDonor.sponsor || 'record')
-      .toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    doc.save(`${fileSafeName}-record-summary.pdf`);
-  };
+const handleDownloadSummary = () => {
+  if (!currentDonor) return;
+  const linkedCampaign = getLinkedCampaign(currentDonor);
+  const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+  const W = 595;
+  const orange = [230, 126, 14];
+  const white = [255, 255, 255];
+  const black = [0, 0, 0];
+  const gray = [120, 120, 120];
+  const lightOrange = [255, 243, 220];
+
+  // ── Top accent bar ────────────────────────────────────────────────────────
+  doc.setFillColor(...orange);
+  doc.rect(0, 0, W, 8, 'F');
+
+  // ── Logo top-LEFT using imported kcLogo ───────────────────────────────────
+  doc.addImage(kcLogo, 'PNG', 30, 14, 60, 60);
+
+  // ── Title + org info (shifted right to clear logo) ────────────────────────
+  doc.setTextColor(...black);
+  doc.setFontSize(18);
+  doc.setFont('helvetica', 'bold');
+  doc.text('SPONSORSHIP RECORD SUMMARY', 105, 30);
+
+  doc.setFontSize(8.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...gray);
+  doc.text('Knowledge Channel Foundation, Inc.', 105, 45);
+  doc.text('Congressional Ave., Quezon City, Metro Manila', 105, 57);
+  doc.text('finance@knowledgechannel.org', 105, 69);
+
+  // ── Record No. + Date (top right) ─────────────────────────────────────────
+  const statNo = `REC-${Math.floor(100000 + Math.random() * 900000)}`;
+  const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  doc.setTextColor(...gray);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Record No.', W - 40, 35, { align: 'right' });
+  doc.setTextColor(...black);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.text(statNo, W - 40, 47, { align: 'right' });
+  doc.setTextColor(...gray);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.text('Date', W - 40, 62, { align: 'right' });
+  doc.setTextColor(...black);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.text(today, W - 40, 74, { align: 'right' });
+
+  // ── Divider ───────────────────────────────────────────────────────────────
+  doc.setFillColor(...orange);
+  doc.rect(0, 82, W, 3, 'F');
+
+  // ── Sponsor Info ──────────────────────────────────────────────────────────
+  doc.setDrawColor(...orange);
+  doc.setLineWidth(2);
+  doc.line(40, 105, 40, 125);
+  doc.setTextColor(...orange);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.text('SPONSOR', 50, 119);
+
+  doc.setTextColor(...black);
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.text(currentDonor.sponsor || '-', 40, 147);
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...gray);
+  let sponsorY = 162;
+  if (currentDonor.email) { doc.text(currentDonor.email, 40, sponsorY); sponsorY += 13; }
+  if (currentDonor.contact) doc.text(currentDonor.contact, 40, sponsorY);
+
+  // ── Program Table ─────────────────────────────────────────────────────────
+  const COL = { desc: 52, prog: 240, due: 350, status: 435, amt: W - 52 };
+  const tableTop = 192;
+
+  doc.setFillColor(...orange);
+  doc.rect(40, tableTop, W - 80, 22, 'F');
+  doc.setTextColor(...white);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.text('DESCRIPTION', COL.desc, tableTop + 15);
+  doc.text('PROGRAM',     COL.prog, tableTop + 15);
+  doc.text('DUE DATE',    COL.due,  tableTop + 15);
+  doc.text('STATUS',      COL.status, tableTop + 15);
+  doc.text('AMOUNT',      COL.amt,  tableTop + 15, { align: 'right' });
+
+  let rowY = tableTop + 22;
+
+  // ── Current record row ────────────────────────────────────────────────────
+  const currentAmt = Number(currentDonor.amount || 0);
+  const tranches = Number(currentDonor.tranches) || 1;
+  const perTranche = Math.round(currentAmt / tranches);
+
+  doc.setFillColor(...lightOrange);
+  doc.rect(40, rowY, W - 80, 38, 'F');
+  doc.setDrawColor(...orange);
+  doc.setLineWidth(0.5);
+  doc.rect(40, rowY, W - 80, 38, 'S');
+
+  doc.setTextColor(...black);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.text('CURRENT', COL.desc, rowY + 13);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8.5);
+  const descLabel = currentDonor.description
+    ? String(currentDonor.description).slice(0, 30) + (currentDonor.description.length > 30 ? '…' : '')
+    : '-';
+  doc.setTextColor(...gray);
+  doc.text(descLabel, COL.desc, rowY + 25);
+  doc.setTextColor(...black);
+  doc.text(currentDonor.project || '-', COL.prog, rowY + 13);
+  doc.text(formatDate(currentDonor.dueDate), COL.due, rowY + 13);
+  doc.text(normalizeStatus(currentDonor.status), COL.status, rowY + 13);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`PHP ${currentAmt.toLocaleString()}`, COL.amt, rowY + 13, { align: 'right' });
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...orange);
+  doc.setFontSize(7.5);
+  doc.text(
+    `${tranches} tranche${tranches > 1 ? 's' : ''} · PHP ${perTranche.toLocaleString()} each`,
+    COL.prog, rowY + 27
+  );
+  rowY += 38;
+
+  // ── History rows ──────────────────────────────────────────────────────────
+  if (donorHistory && donorHistory.length > 0) {
+    doc.setFillColor(245, 230, 200);
+    doc.rect(40, rowY, W - 80, 18, 'F');
+    doc.setTextColor(...orange);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7.5);
+    doc.text(
+      'EDIT HISTORY (PREVIOUS VERSIONS — FOR REFERENCE ONLY)',
+      COL.desc, rowY + 12
+    );
+    rowY += 18;
+
+    donorHistory.forEach((snap, idx) => {
+      if (idx % 2 === 0) {
+        doc.setFillColor(245, 245, 245);
+      } else {
+        doc.setFillColor(255, 255, 255);
+      }
+      doc.rect(40, rowY, W - 80, 24, 'F');
+
+      doc.setTextColor(...orange);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7.5);
+      doc.text(`v${donorHistory.length - idx}`, COL.desc, rowY + 16);
+
+      const snapDesc = snap.description
+        ? String(snap.description).slice(0, 25) + (snap.description.length > 25 ? '…' : '')
+        : '-';
+      doc.setTextColor(...gray);
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(8);
+      doc.text(snapDesc, COL.desc + 18, rowY + 16);
+
+      doc.setTextColor(100, 100, 100);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8.5);
+      doc.text(snap.project || '-', COL.prog, rowY + 16);
+      doc.text(formatDate(snap.dueDate), COL.due, rowY + 16);
+      doc.text(normalizeStatus(snap.status), COL.status, rowY + 16);
+
+      doc.setTextColor(150, 150, 150);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`PHP ${Number(snap.amount || 0).toLocaleString()}`, COL.amt, rowY + 16, { align: 'right' });
+
+      doc.setDrawColor(220, 220, 220);
+      doc.setLineWidth(0.3);
+      doc.rect(40, rowY, W - 80, 24, 'S');
+      rowY += 24;
+
+      if (rowY > 750) { doc.addPage(); rowY = 40; }
+    });
+  }
+
+  // ── Totals ────────────────────────────────────────────────────────────────
+  const historyTotal = donorHistory
+    ? donorHistory.reduce((sum, snap) => sum + Number(snap.amount || 0), 0)
+    : 0;
+  const overallTotal = currentAmt + historyTotal;
+
+  const totTop = rowY + 18;
+
+  doc.setTextColor(...gray);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.text('Current Record:', 340, totTop);
+  doc.setTextColor(...black);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`PHP ${currentAmt.toLocaleString()}`, W - 52, totTop, { align: 'right' });
+
+  doc.setTextColor(...gray);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.text('Previous Versions:', 340, totTop + 14);
+  doc.setTextColor(100, 100, 100);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`PHP ${historyTotal.toLocaleString()}`, W - 52, totTop + 14, { align: 'right' });
+
+  doc.setDrawColor(220, 220, 220);
+  doc.setLineWidth(0.5);
+  doc.line(340, totTop + 22, W - 52, totTop + 22);
+
+  doc.setFillColor(...orange);
+  doc.rect(300, totTop + 28, W - 340, 26, 'F');
+  doc.setTextColor(...white);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.text('OVERALL TOTAL:', 312, totTop + 46);
+  doc.text(`PHP ${overallTotal.toLocaleString()}`, W - 52, totTop + 46, { align: 'right' });
+
+  // ── Record Details ────────────────────────────────────────────────────────
+  const payTop = totTop + 72;
+  doc.setDrawColor(220, 220, 220);
+  doc.setLineWidth(0.5);
+  doc.roundedRect(40, payTop, W - 80, 118, 4, 4, 'S');
+  doc.setDrawColor(...orange);
+  doc.setLineWidth(2);
+  doc.line(55, payTop + 16, 55, payTop + 34);
+  doc.setTextColor(...orange);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.text('RECORD DETAILS', 65, payTop + 28);
+
+  const detailFields = [
+    ['Type / Source:',  currentDonor.type || '-'],
+    ['Payment Date:',   formatDate(currentDonor.deliveryDate)],
+    ['Due Date:',       formatDate(currentDonor.dueDate)],
+    ['Beneficiaries:',  String(currentDonor.units ?? '-')],
+    ['Added By:',       currentDonor.created_by || '-'],
+  ];
+  if (linkedCampaign) detailFields.push(['Linked Campaign:', linkedCampaign.title]);
+
+  let detY = payTop + 50;
+  detailFields.forEach(([label, value]) => {
+    doc.setTextColor(...gray);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.text(label, 55, detY);
+    doc.setTextColor(...black);
+    doc.setFont('helvetica', 'bold');
+    doc.text(String(value), 175, detY);
+    detY += 15;
+  });
+
+  // ── Footer ────────────────────────────────────────────────────────────────
+  doc.setFillColor(...orange);
+  doc.rect(0, 780, W, 61, 'F');
+  doc.setTextColor(...white);
+  doc.setFont('helvetica', 'italic');
+  doc.setFontSize(9);
+  doc.text(
+    'Thank you for your generous support of quality education for every Filipino child.',
+    W / 2, 800, { align: 'center' }
+  );
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.text(
+    'Knowledge Channel Foundation  ·  finance@knowledgechannel.org  ·  www.knowledgechannel.org',
+    W / 2, 820, { align: 'center' }
+  );
+
+  const fileSafeName = String(currentDonor.project || currentDonor.sponsor || 'record')
+    .toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  doc.save(`${fileSafeName}-record-summary.pdf`);
+};
 
   const campaignOptions = [
     { label: '— No linked campaign —', value: '' },
     ...(campaigns || []).map((c) => ({ label: c.title, value: String(c.id) })),
   ];
 
-  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-5 px-1">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pt-1">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 leading-tight">Sponsorship Records</h1>
@@ -273,7 +505,6 @@ export function Donors() {
 
       <Card>
         <CardContent className="p-5">
-          {/* Filters */}
           <div className="flex flex-col sm:flex-row gap-3 mb-5">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
@@ -301,7 +532,6 @@ export function Donors() {
             </div>
           </div>
 
-          {/* Grouped Table */}
           <div className="space-y-3">
             {paginatedSponsors.length === 0 && (
               <div className="py-12 text-center text-sm text-gray-400">No records found.</div>
@@ -390,7 +620,6 @@ export function Donors() {
             })}
           </div>
 
-          {/* Pagination */}
           <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
             <p className="text-sm text-gray-500">
               Showing <span className="font-medium text-gray-700">{paginatedSponsors.length}</span> of{' '}
@@ -429,17 +658,15 @@ export function Donors() {
         </CardContent>
       </Card>
 
-      {/* ── Add / Edit Modal ── */}
+      {/* Add / Edit Modal */}
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={currentDonor ? 'Edit Record' : 'Add New Record'}>
         <form onSubmit={handleSubmit} className="flex flex-col" style={{ maxHeight: '70vh' }}>
           <div className="overflow-y-auto pr-1 flex-1 space-y-5">
             <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200 space-y-4">
-
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1">Name of Sponsor</label>
                 <Input value={form.sponsor} onChange={setField('sponsor')} placeholder="Enter sponsor name" className="w-full" required />
               </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1">Contact Number</label>
@@ -450,7 +677,6 @@ export function Donors() {
                   <Input type="email" value={form.email} onChange={setField('email')} placeholder="example@email.com" />
                 </div>
               </div>
-
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1">Program</label>
                 <Select value={form.project} onChange={setField('project')}
@@ -463,14 +689,12 @@ export function Donors() {
                   ]}
                 />
               </div>
-
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1">
                   Linked Campaign <span className="ml-1 text-xs font-normal text-gray-400">(optional)</span>
                 </label>
                 <Select value={form.campaign_id} onChange={setField('campaign_id')} options={campaignOptions} />
               </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1">Number of Beneficiaries</label>
@@ -481,7 +705,6 @@ export function Donors() {
                   <Input type="date" value={form.deliveryDate} onChange={setField('deliveryDate')} />
                 </div>
               </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1">Due Date</label>
@@ -492,7 +715,6 @@ export function Donors() {
                   <Input type="number" value={form.amount} onChange={setField('amount')} placeholder="0" />
                 </div>
               </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1">Number of Tranches</label>
@@ -512,7 +734,6 @@ export function Donors() {
                   />
                 </div>
               </div>
-
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1">Status</label>
                 <Select value={form.status} onChange={setField('status')}
@@ -523,7 +744,6 @@ export function Donors() {
                   ]}
                 />
               </div>
-
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1">Project Description</label>
                 <textarea
@@ -536,7 +756,6 @@ export function Donors() {
               </div>
             </div>
           </div>
-
           <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 mt-2 shrink-0">
             <Button variant="secondary" type="button" onClick={() => setIsModalOpen(false)}>Cancel</Button>
             <Button type="submit">Save Record</Button>
@@ -544,13 +763,12 @@ export function Donors() {
         </form>
       </Modal>
 
-      {/* ── View Profile Modal ── */}
+      {/* View Profile Modal */}
       <Modal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} title="Record Details">
         {currentDonor && (() => {
           const linkedCampaign = getLinkedCampaign(currentDonor);
           return (
             <div className="flex flex-col" style={{ maxHeight: '80vh' }}>
-              {/* Sponsor header */}
               <div className="flex items-center gap-4 pb-3">
                 <div className="h-14 w-14 rounded-full bg-sky-100 flex items-center justify-center text-sky-700 text-xl font-bold shrink-0">
                   {(currentDonor.sponsor || '?').charAt(0).toUpperCase()}
@@ -570,7 +788,6 @@ export function Donors() {
                 </div>
               </div>
 
-              {/* Tabs */}
               <div className="flex border-b border-gray-200 mb-4">
                 {['details', 'history'].map((tab) => (
                   <button key={tab} onClick={() => setProfileTab(tab)}
@@ -588,7 +805,6 @@ export function Donors() {
                 ))}
               </div>
 
-              {/* Details Tab */}
               {profileTab === 'details' && (
                 <div className="overflow-y-auto flex-1 space-y-3 pr-1">
                   <div className="grid grid-cols-2 gap-3">
@@ -626,13 +842,13 @@ export function Donors() {
 
                   <div className="grid grid-cols-2 gap-3">
                     {[
-  { label: 'Type',           value: currentDonor.type },
-  { label: 'Schools / PMLs', value: currentDonor.units ?? '—' },
-  { label: 'Payment Date',   value: formatDate(currentDonor.deliveryDate) },
-  { label: 'Due Date',       value: formatDate(currentDonor.dueDate) },
-  { label: 'Tranches',       value: currentDonor.tranches ?? '—' },
-  { label: 'Added By',       value: currentDonor.created_by ?? '—' }, // 👈
-].map(({ label, value }) => (
+                      { label: 'Type',           value: currentDonor.type },
+                      { label: 'Schools / PMLs', value: currentDonor.units ?? '—' },
+                      { label: 'Payment Date',   value: formatDate(currentDonor.deliveryDate) },
+                      { label: 'Due Date',       value: formatDate(currentDonor.dueDate) },
+                      { label: 'Tranches',       value: currentDonor.tranches ?? '—' },
+                      { label: 'Added By',       value: currentDonor.created_by ?? '—' },
+                    ].map(({ label, value }) => (
                       <div key={label} className="p-3.5 bg-white rounded-xl border border-gray-200 shadow-sm">
                         <p className="text-[10px] text-gray-500 uppercase font-semibold tracking-wide mb-1">{label}</p>
                         <p className="text-sm font-semibold text-gray-900">{value}</p>
@@ -646,7 +862,6 @@ export function Donors() {
                 </div>
               )}
 
-              {/* History Tab */}
               {profileTab === 'history' && (
                 <div className="overflow-y-auto flex-1 space-y-3 pr-1">
                   {donorHistory.length === 0 ? (

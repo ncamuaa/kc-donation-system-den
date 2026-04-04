@@ -5,6 +5,12 @@ const { requireAuth } = require('../middleware/auth');
 
 router.use(requireAuth);
 
+// Helper — strips ISO timestamps down to YYYY-MM-DD for MySQL date columns
+const toDateOnly = (val) => {
+  if (!val) return null;
+  return String(val).slice(0, 10);
+};
+
 // ── GET all donors — join campaign title ──────────────────────────────────────
 router.get('/', async (req, res) => {
   try {
@@ -49,7 +55,7 @@ router.post('/', async (req, res) => {
       });
     }
 
-    const createdBy = req.user?.email || null; // 👈 get logged-in admin's email
+    const createdBy = req.user?.email || null;
 
     const sql = `
       INSERT INTO donors
@@ -61,8 +67,8 @@ router.post('/', async (req, res) => {
       project      || null,
       description  || null,
       Number(units || 0),
-      deliveryDate || null,
-      dueDate      || null,
+      toDateOnly(deliveryDate),
+      toDateOnly(dueDate),
       sponsor,
       Number(amount || 0),
       type,
@@ -71,7 +77,7 @@ router.post('/', async (req, res) => {
       contact      || null,
       Number(tranches || 0),
       campaign_id ? Number(campaign_id) : null,
-      createdBy,   // 👈 added
+      createdBy,
     ];
 
     const [result] = await db.query(sql, values);
@@ -81,8 +87,8 @@ router.post('/', async (req, res) => {
       project:      project      || null,
       description:  description  || null,
       units:        Number(units || 0),
-      deliveryDate: deliveryDate || null,
-      dueDate:      dueDate      || null,
+      deliveryDate: toDateOnly(deliveryDate),
+      dueDate:      toDateOnly(dueDate),
       sponsor,
       amount:       Number(amount || 0),
       type,
@@ -91,7 +97,7 @@ router.post('/', async (req, res) => {
       contact:      contact      || null,
       tranches:     Number(tranches || 0),
       campaign_id:  campaign_id ? Number(campaign_id) : null,
-      created_by:   createdBy,   // 👈 added
+      created_by:   createdBy,
     });
   } catch (err) {
     console.error('POST /api/donors error:', err);
@@ -144,8 +150,8 @@ router.put('/:id', async (req, res) => {
       project      || null,
       description  || null,
       Number(units || 0),
-      deliveryDate || null,
-      dueDate      || null,
+      toDateOnly(deliveryDate),
+      toDateOnly(dueDate),
       sponsor,
       Number(amount || 0),
       type,
@@ -154,7 +160,7 @@ router.put('/:id', async (req, res) => {
       contact      || null,
       Number(tranches || 0),
       campaign_id ? Number(campaign_id) : null,
-      req.user?.email || null,  // 👈 added
+      req.user?.email || null,
       id,
     ];
 
@@ -215,8 +221,8 @@ router.post('/:id/history', async (req, res) => {
       snapshot.project      || null,
       snapshot.description  || null,
       Number(snapshot.units || 0),
-      snapshot.deliveryDate || null,
-      snapshot.dueDate      || null,
+      toDateOnly(snapshot.deliveryDate),  // ← fixed
+      toDateOnly(snapshot.dueDate),       // ← fixed
       snapshot.sponsor      || null,
       Number(snapshot.amount || 0),
       snapshot.type         || null,
@@ -230,7 +236,7 @@ router.post('/:id/history', async (req, res) => {
     res.status(201).json({ id: result.insertId, message: 'Snapshot saved' });
   } catch (err) {
     console.error('POST /donors/:id/history error:', err);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error', error: err.message });
   }
 });
 
