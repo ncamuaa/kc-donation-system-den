@@ -3,7 +3,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area, Legend
 } from 'recharts';
-import { Download, Calendar, Filter } from 'lucide-react';
+import { Download, Calendar, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Select } from '../components/ui/Select';
@@ -14,6 +14,7 @@ import kcLogo from '../assets/1.png';
 
 const COLORS = ['#3b82f6', '#22c55e', '#eab308', '#ef4444', '#8b5cf6', '#f97316', '#06b6d4'];
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const PAGE_SIZE = 10;
 
 const normalizeStatus = (s) => {
   const v = String(s || '').trim().toLowerCase();
@@ -36,6 +37,7 @@ export function Reports() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [typeFilter, setTypeFilter] = useState('All');
+  const [currentPage, setCurrentPage] = useState(1);
 
   const filteredDonors = useMemo(() => {
     return donors.filter((d) => {
@@ -46,6 +48,11 @@ export function Reports() {
       return afterStart && beforeEnd && matchesType;
     });
   }, [donors, startDate, endDate, typeFilter]);
+
+  // Reset to page 1 when filters change
+  const totalPages = Math.max(1, Math.ceil(filteredDonors.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedDonors = filteredDonors.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   const sponTotal = filteredDonors.reduce((s, d) => s + Number(d.amount || 0), 0);
   const sponActive = filteredDonors.filter((d) => normalizeStatus(d.status) === 'Active').length;
@@ -87,6 +94,13 @@ export function Reports() {
     });
     return Array.from(map.entries()).map(([name, value]) => ({ name, value }));
   }, [filteredDonors]);
+
+  const handleFilterReset = () => {
+    setStartDate('');
+    setEndDate('');
+    setTypeFilter('All');
+    setCurrentPage(1);
+  };
 
   // ─── PDF EXPORT ────────────────────────────────────────────────────────────
   const handleExportPDF = () => {
@@ -206,7 +220,6 @@ export function Reports() {
     doc.text('AMOUNT', pageW - 16, y + 5.5, { align: 'right' });
     y += 8;
 
-    // group by program
     const programMap = new Map();
     filteredDonors.forEach((d) => {
       const k = d.project || 'Unknown';
@@ -275,13 +288,25 @@ export function Reports() {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(7.5);
     doc.setTextColor(80, 40, 0);
-    const COL = { sponsor: 17, program: 68, type: 120, status: 148, date: 168, amount: pageW - 16 };
-    doc.text('SPONSOR', COL.sponsor, y + 5.5);
-    doc.text('PROGRAM', COL.program, y + 5.5);
-    doc.text('TYPE', COL.type, y + 5.5);
-    doc.text('STATUS', COL.status, y + 5.5);
-    doc.text('DATE', COL.date, y + 5.5);
-    doc.text('AMOUNT', COL.amount, y + 5.5, { align: 'right' });
+
+    // Fixed column positions — spread evenly to avoid overlap
+    const COL = {
+      sponsor:  14,
+      program:  55,
+      type:     102,
+      status:   122,
+      date:     145,
+      dueDate:  168,
+      amount:   pageW - 14,
+    };
+
+    doc.text('SPONSOR',      COL.sponsor + 2,  y + 5.5);
+    doc.text('PROGRAM',      COL.program + 2,  y + 5.5);
+    doc.text('TYPE',         COL.type + 2,     y + 5.5);
+    doc.text('STATUS',       COL.status + 2,   y + 5.5);
+    doc.text('DEL. DATE',    COL.date + 2,     y + 5.5);
+    doc.text('DUE DATE',     COL.dueDate + 2,  y + 5.5);
+    doc.text('AMOUNT',       COL.amount,       y + 5.5, { align: 'right' });
     y += 8;
 
     filteredDonors.forEach((d, i) => {
@@ -292,13 +317,14 @@ export function Reports() {
       doc.setLineWidth(0.1);
       doc.rect(14, y, pageW - 28, 7, 'S');
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(7.5);
+      doc.setFontSize(7);
       doc.setTextColor(...black);
-      doc.text(String(d.sponsor || '—').substring(0, 22), COL.sponsor, y + 5);
-      doc.text(String(d.project || '—').substring(0, 18), COL.program, y + 5);
-      doc.text(String(d.type || '—').substring(0, 10), COL.type, y + 5);
-      doc.text(normalizeStatus(d.status).substring(0, 10), COL.status, y + 5);
-      doc.text(d.deliveryDate ? String(d.deliveryDate).slice(0, 10) : '—', COL.date, y + 5);
+      doc.text(String(d.sponsor  || '—').substring(0, 18), COL.sponsor + 2,  y + 5);
+      doc.text(String(d.project  || '—').substring(0, 20), COL.program + 2,  y + 5);
+      doc.text(String(d.type     || '—').substring(0, 10), COL.type + 2,     y + 5);
+      doc.text(normalizeStatus(d.status).substring(0, 10), COL.status + 2,   y + 5);
+      doc.text(d.deliveryDate ? String(d.deliveryDate).slice(0, 10) : '—',   COL.date + 2,    y + 5);
+      doc.text(d.dueDate      ? String(d.dueDate).slice(0, 10)      : '—',   COL.dueDate + 2, y + 5);
       doc.setFont('helvetica', 'bold');
       doc.text(`PHP ${Number(d.amount || 0).toLocaleString()}`, COL.amount, y + 5, { align: 'right' });
       y += 7;
@@ -311,13 +337,13 @@ export function Reports() {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8.5);
     doc.setTextColor(...white);
-    doc.text('TOTAL', COL.sponsor, y + 6);
+    doc.text('TOTAL', COL.sponsor + 2, y + 6);
     doc.text(`PHP ${sponTotal.toLocaleString()}`, COL.amount, y + 6, { align: 'right' });
     y += 9;
 
     // ── FOOTER on every page ─────────────────────────────────────────────
-    const totalPages = doc.internal.getNumberOfPages();
-    for (let i = 1; i <= totalPages; i++) {
+    const totalPdfPages = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= totalPdfPages; i++) {
       doc.setPage(i);
       doc.setFillColor(...orange);
       doc.rect(0, 278, pageW, 1.5, 'F');
@@ -327,7 +353,7 @@ export function Reports() {
       doc.setFontSize(7.5);
       doc.setTextColor(80, 40, 0);
       doc.text('Thank you for your generous support of quality education for every Filipino child.', pageW / 2, 287, { align: 'center' });
-      doc.text(`Knowledge Channel Foundation  ·  finance@knowledgechannel.org  ·  www.knowledgechannel.org  ·  Page ${i} of ${totalPages}`, pageW / 2, 293, { align: 'center' });
+      doc.text(`Knowledge Channel Foundation  ·  finance@knowledgechannel.org  ·  www.knowledgechannel.org  ·  Page ${i} of ${totalPdfPages}`, pageW / 2, 293, { align: 'center' });
     }
 
     doc.save(`sponsorship-report-${rptNo}.pdf`);
@@ -355,9 +381,9 @@ export function Reports() {
               <Calendar className="h-4 w-4 text-gray-500" />
               <span className="text-sm font-medium text-gray-700">Date Range:</span>
             </div>
-            <Input type="date" className="w-auto" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+            <Input type="date" className="w-auto" value={startDate} onChange={(e) => { setStartDate(e.target.value); setCurrentPage(1); }} />
             <span className="text-gray-400">–</span>
-            <Input type="date" className="w-auto" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+            <Input type="date" className="w-auto" value={endDate} onChange={(e) => { setEndDate(e.target.value); setCurrentPage(1); }} />
             <div className="flex items-center gap-2 ml-2">
               <Filter className="h-4 w-4 text-gray-500" />
               <span className="text-sm font-medium text-gray-700">Type:</span>
@@ -365,7 +391,7 @@ export function Reports() {
             <div className="w-44">
               <Select
                 value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value)}
+                onChange={(e) => { setTypeFilter(e.target.value); setCurrentPage(1); }}
                 options={[
                   { label: 'All Sponsor Types', value: 'All' },
                   { label: 'Government', value: 'Government' },
@@ -377,7 +403,7 @@ export function Reports() {
                 ]}
               />
             </div>
-            <Button variant="secondary" onClick={() => { setStartDate(''); setEndDate(''); setTypeFilter('All'); }}>
+            <Button variant="secondary" onClick={handleFilterReset}>
               Reset
             </Button>
           </div>
@@ -538,7 +564,7 @@ export function Reports() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {filteredDonors.length > 0 ? filteredDonors.map((d) => (
+                {paginatedDonors.length > 0 ? paginatedDonors.map((d) => (
                   <tr key={d.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm font-medium text-gray-900">{d.project}</td>
                     <td className="px-4 py-3 text-sm text-gray-900">{d.sponsor}</td>
@@ -559,6 +585,55 @@ export function Reports() {
               </tbody>
             </table>
           </div>
+
+          {/* ─── PAGINATION ───────────────────────────────────────────────────── */}
+          {filteredDonors.length > 0 && (
+            <div className="flex items-center justify-between mt-4 px-1">
+              <p className="text-sm text-gray-500">
+                Showing <span className="font-medium">{(safePage - 1) * PAGE_SIZE + 1}</span>–<span className="font-medium">{Math.min(safePage * PAGE_SIZE, filteredDonors.length)}</span> of <span className="font-medium">{filteredDonors.length}</span> records
+              </p>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={safePage === 1}
+                  className="p-1.5 rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter((p) => p === 1 || p === totalPages || Math.abs(p - safePage) <= 1)
+                  .reduce((acc, p, idx, arr) => {
+                    if (idx > 0 && p - arr[idx - 1] > 1) acc.push('…');
+                    acc.push(p);
+                    return acc;
+                  }, [])
+                  .map((p, idx) =>
+                    p === '…' ? (
+                      <span key={`ellipsis-${idx}`} className="px-2 text-gray-400 text-sm">…</span>
+                    ) : (
+                      <button
+                        key={p}
+                        onClick={() => setCurrentPage(p)}
+                        className={`min-w-[32px] h-8 px-2 rounded-md text-sm border ${
+                          safePage === p
+                            ? 'bg-orange-500 text-white border-orange-500 font-semibold'
+                            : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                        }`}
+                      >
+                        {p}
+                      </button>
+                    )
+                  )}
+                <button
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={safePage === totalPages}
+                  className="p-1.5 rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
