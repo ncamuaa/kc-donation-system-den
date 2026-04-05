@@ -18,6 +18,7 @@ const blankForm = {
   contact: '',
   email: '',
   project: 'Video Production',
+  projectOther: '',
   campaign_id: '',
   units: '',
   deliveryDate: '',
@@ -51,6 +52,22 @@ export function Donors() {
 
   const [form, setForm] = useState(blankForm);
   const setField = (field) => (e) => setForm((prev) => ({ ...prev, [field]: e.target.value }));
+
+  // The known program options (excluding Others)
+  const KNOWN_PROGRAMS = [
+    'Video Production',
+    'Knowledge Channel TV Package (KCTV)',
+    'KCTV',
+    'Knowledge Portable Media Library (KCPML)',
+    'KCPML',
+    'Teacher Training',
+  ];
+
+  // When editing, detect if the saved project is a custom "Others" value
+  const isKnownProgram = (val) =>
+    !val ||
+    KNOWN_PROGRAMS.includes(val) ||
+    val === 'Others';
 
   const formatDate = (val) => {
     if (!val) return '-';
@@ -143,11 +160,17 @@ export function Donors() {
 
   const handleEditDonor = (donor) => {
     setCurrentDonor(donor);
+
+    // Determine if the saved project is a custom value (not in the known list)
+    const savedProject = donor.project || 'Video Production';
+    const isCustom = !isKnownProgram(savedProject);
+
     setForm({
       sponsor:      donor.sponsor      || '',
       contact:      donor.contact      || '',
       email:        donor.email        || '',
-      project:      donor.project      || 'Video Production',
+      project:      isCustom ? 'Others' : savedProject,
+      projectOther: isCustom ? savedProject : '',
       campaign_id:  donor.campaign_id  ? String(donor.campaign_id) : '',
       units:        donor.units        != null ? String(donor.units) : '',
       deliveryDate: donor.deliveryDate ? String(donor.deliveryDate).slice(0, 10) : '',
@@ -158,7 +181,6 @@ export function Donors() {
       status:       normalizeStatus(donor.status),
       description:  donor.description  || '',
     });
-    // Pre-load history so the History tab is ready if the user opens the profile after saving
     fetchDonorHistory(donor.id).then(setDonorHistory);
     setIsModalOpen(true);
   };
@@ -172,6 +194,14 @@ export function Donors() {
     navigate('/campaigns', { state: { openCampaignId: campaignId } });
   };
 
+  // Resolve the final project value: if "Others", use the custom text field
+  const resolveProject = () => {
+    if (form.project === 'Others') {
+      return form.projectOther.trim() || 'Others';
+    }
+    return form.project;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -180,7 +210,7 @@ export function Donors() {
       sponsor:      form.sponsor,
       contact:      form.contact      || null,
       email:        form.email        || null,
-      project:      form.project      || null,
+      project:      resolveProject(),
       campaign_id:  form.campaign_id  ? Number(form.campaign_id) : null,
       units:        Number(form.units    || 0),
       deliveryDate: form.deliveryDate || null,
@@ -193,16 +223,10 @@ export function Donors() {
     };
 
     if (currentDonor) {
-      // Always save a snapshot of the PREVIOUS state before updating.
-      // No JSON comparison — we never skip this, so history always reflects every save.
       await saveDonorSnapshot(currentDonor.id, { ...currentDonor });
       await updateDonor(newDonor);
-
-      // Refresh history state so the History tab shows the new entry immediately
       const updated = await fetchDonorHistory(currentDonor.id);
       setDonorHistory(updated);
-
-      // Keep currentDonor in sync so the profile modal shows fresh data if open
       setCurrentDonor((prev) => ({ ...prev, ...newDonor }));
     } else {
       await addDonor(newDonor);
@@ -222,14 +246,11 @@ const handleDownloadSummary = () => {
   const gray = [120, 120, 120];
   const lightOrange = [255, 243, 220];
 
-  // ── Top accent bar ────────────────────────────────────────────────────────
   doc.setFillColor(...orange);
   doc.rect(0, 0, W, 8, 'F');
 
-  // ── Logo top-LEFT using imported kcLogo ───────────────────────────────────
   doc.addImage(kcLogo, 'PNG', 30, 14, 60, 60);
 
-  // ── Title + org info (shifted right to clear logo) ────────────────────────
   doc.setTextColor(...black);
   doc.setFontSize(18);
   doc.setFont('helvetica', 'bold');
@@ -242,7 +263,6 @@ const handleDownloadSummary = () => {
   doc.text('Congressional Ave., Quezon City, Metro Manila', 105, 57);
   doc.text('finance@knowledgechannel.org', 105, 69);
 
-  // ── Record No. + Date (top right) ─────────────────────────────────────────
   const statNo = `REC-${Math.floor(100000 + Math.random() * 900000)}`;
   const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
   doc.setTextColor(...gray);
@@ -262,11 +282,9 @@ const handleDownloadSummary = () => {
   doc.setFontSize(9);
   doc.text(today, W - 40, 74, { align: 'right' });
 
-  // ── Divider ───────────────────────────────────────────────────────────────
   doc.setFillColor(...orange);
   doc.rect(0, 82, W, 3, 'F');
 
-  // ── Sponsor Info ──────────────────────────────────────────────────────────
   doc.setDrawColor(...orange);
   doc.setLineWidth(2);
   doc.line(40, 105, 40, 125);
@@ -286,7 +304,6 @@ const handleDownloadSummary = () => {
   if (currentDonor.email) { doc.text(currentDonor.email, 40, sponsorY); sponsorY += 13; }
   if (currentDonor.contact) doc.text(currentDonor.contact, 40, sponsorY);
 
-  // ── Program Table ─────────────────────────────────────────────────────────
   const COL = { desc: 52, prog: 240, due: 350, status: 435, amt: W - 52 };
   const tableTop = 192;
 
@@ -303,7 +320,6 @@ const handleDownloadSummary = () => {
 
   let rowY = tableTop + 22;
 
-  // ── Current record row ────────────────────────────────────────────────────
   const currentAmt = Number(currentDonor.amount || 0);
   const tranches = Number(currentDonor.tranches) || 1;
   const perTranche = Math.round(currentAmt / tranches);
@@ -340,32 +356,22 @@ const handleDownloadSummary = () => {
   );
   rowY += 38;
 
-  // ── History rows ──────────────────────────────────────────────────────────
   if (donorHistory && donorHistory.length > 0) {
     doc.setFillColor(245, 230, 200);
     doc.rect(40, rowY, W - 80, 18, 'F');
     doc.setTextColor(...orange);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(7.5);
-    doc.text(
-      'EDIT HISTORY (PREVIOUS VERSIONS — FOR REFERENCE ONLY)',
-      COL.desc, rowY + 12
-    );
+    doc.text('EDIT HISTORY (PREVIOUS VERSIONS — FOR REFERENCE ONLY)', COL.desc, rowY + 12);
     rowY += 18;
 
     donorHistory.forEach((snap, idx) => {
-      if (idx % 2 === 0) {
-        doc.setFillColor(245, 245, 245);
-      } else {
-        doc.setFillColor(255, 255, 255);
-      }
+      if (idx % 2 === 0) { doc.setFillColor(245, 245, 245); } else { doc.setFillColor(255, 255, 255); }
       doc.rect(40, rowY, W - 80, 24, 'F');
-
       doc.setTextColor(...orange);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(7.5);
       doc.text(`v${donorHistory.length - idx}`, COL.desc, rowY + 16);
-
       const snapDesc = snap.description
         ? String(snap.description).slice(0, 25) + (snap.description.length > 25 ? '…' : '')
         : '-';
@@ -373,33 +379,25 @@ const handleDownloadSummary = () => {
       doc.setFont('helvetica', 'italic');
       doc.setFontSize(8);
       doc.text(snapDesc, COL.desc + 18, rowY + 16);
-
       doc.setTextColor(100, 100, 100);
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8.5);
       doc.text(snap.project || '-', COL.prog, rowY + 16);
       doc.text(formatDate(snap.dueDate), COL.due, rowY + 16);
       doc.text(normalizeStatus(snap.status), COL.status, rowY + 16);
-
       doc.setTextColor(150, 150, 150);
       doc.setFont('helvetica', 'normal');
       doc.text(`PHP ${Number(snap.amount || 0).toLocaleString()}`, COL.amt, rowY + 16, { align: 'right' });
-
       doc.setDrawColor(220, 220, 220);
       doc.setLineWidth(0.3);
       doc.rect(40, rowY, W - 80, 24, 'S');
       rowY += 24;
-
       if (rowY > 750) { doc.addPage(); rowY = 40; }
     });
   }
 
-  // ── Totals ────────────────────────────────────────────────────────────────
-  const historyTotal = donorHistory
-    ? donorHistory.reduce((sum, snap) => sum + Number(snap.amount || 0), 0)
-    : 0;
+  const historyTotal = donorHistory ? donorHistory.reduce((sum, snap) => sum + Number(snap.amount || 0), 0) : 0;
   const overallTotal = currentAmt + historyTotal;
-
   const totTop = rowY + 18;
 
   doc.setTextColor(...gray);
@@ -409,7 +407,6 @@ const handleDownloadSummary = () => {
   doc.setTextColor(...black);
   doc.setFont('helvetica', 'bold');
   doc.text(`PHP ${currentAmt.toLocaleString()}`, W - 52, totTop, { align: 'right' });
-
   doc.setTextColor(...gray);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
@@ -417,11 +414,9 @@ const handleDownloadSummary = () => {
   doc.setTextColor(100, 100, 100);
   doc.setFont('helvetica', 'bold');
   doc.text(`PHP ${historyTotal.toLocaleString()}`, W - 52, totTop + 14, { align: 'right' });
-
   doc.setDrawColor(220, 220, 220);
   doc.setLineWidth(0.5);
   doc.line(340, totTop + 22, W - 52, totTop + 22);
-
   doc.setFillColor(...orange);
   doc.rect(300, totTop + 28, W - 340, 26, 'F');
   doc.setTextColor(...white);
@@ -430,7 +425,6 @@ const handleDownloadSummary = () => {
   doc.text('OVERALL TOTAL:', 312, totTop + 46);
   doc.text(`PHP ${overallTotal.toLocaleString()}`, W - 52, totTop + 46, { align: 'right' });
 
-  // ── Record Details ────────────────────────────────────────────────────────
   const payTop = totTop + 72;
   doc.setDrawColor(220, 220, 220);
   doc.setLineWidth(0.5);
@@ -464,25 +458,17 @@ const handleDownloadSummary = () => {
     detY += 15;
   });
 
-  // ── Footer ────────────────────────────────────────────────────────────────
   doc.setFillColor(...orange);
   doc.rect(0, 780, W, 61, 'F');
   doc.setTextColor(...white);
   doc.setFont('helvetica', 'italic');
   doc.setFontSize(9);
-  doc.text(
-    'Thank you for your generous support of quality education for every Filipino child.',
-    W / 2, 800, { align: 'center' }
-  );
+  doc.text('Thank you for your generous support of quality education for every Filipino child.', W / 2, 800, { align: 'center' });
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
-  doc.text(
-    'Knowledge Channel Foundation  ·  finance@knowledgechannel.org  ·  www.knowledgechannel.org',
-    W / 2, 820, { align: 'center' }
-  );
+  doc.text('Knowledge Channel Foundation  ·  finance@knowledgechannel.org  ·  www.knowledgechannel.org', W / 2, 820, { align: 'center' });
 
-  const fileSafeName = String(currentDonor.project || currentDonor.sponsor || 'record')
-    .toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  const fileSafeName = String(currentDonor.project || currentDonor.sponsor || 'record').toLowerCase().replace(/[^a-z0-9]+/g, '-');
   doc.save(`${fileSafeName}-record-summary.pdf`);
 };
 
@@ -677,18 +663,42 @@ const handleDownloadSummary = () => {
                   <Input type="email" value={form.email} onChange={setField('email')} placeholder="example@email.com" />
                 </div>
               </div>
+
+              {/* ── Program field with "Others" expansion ── */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1">Program</label>
-                <Select value={form.project} onChange={setField('project')}
+                <Select
+                  value={form.project}
+                  onChange={(e) => {
+                    setForm((prev) => ({
+                      ...prev,
+                      project: e.target.value,
+                      // Clear custom text when switching away from Others
+                      projectOther: e.target.value !== 'Others' ? '' : prev.projectOther,
+                    }));
+                  }}
                   options={[
                     { label: 'Video Production', value: 'Video Production' },
-                    { label: 'Knowledge Channel TV Package (KCTV)', value: 'KCTV' },
-                    { label: 'Knowledge Portable Media Library (KCPML)', value: 'KCPML' },
+                    { label: 'Knowledge Channel TV Package (KCTV)', value: 'Knowledge Channel TV Package (KCTV)' },
+                    { label: 'Knowledge Portable Media Library (KCPML)', value: 'Knowledge Portable Media Library (KCPML)' },
                     { label: 'Teacher Training', value: 'Teacher Training' },
                     { label: 'Others', value: 'Others' },
                   ]}
                 />
+                {/* Show text input only when "Others" is selected */}
+                {form.project === 'Others' && (
+                  <div className="mt-2">
+                    <Input
+                      value={form.projectOther}
+                      onChange={setField('projectOther')}
+                      placeholder="Please specify the program..."
+                      className="w-full"
+                      autoFocus
+                    />
+                  </div>
+                )}
               </div>
+
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1">
                   Linked Campaign <span className="ml-1 text-xs font-normal text-gray-400">(optional)</span>
