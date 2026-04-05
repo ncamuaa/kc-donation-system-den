@@ -62,7 +62,7 @@ export function Reports() {
     });
     return Array.from(map.entries())
       .sort((a, b) => b[1] - a[1])
-      .map(([name, amount]) => ({ name: name.length > 18 ? name.substring(0, 18) + '...' : name, amount }));
+      .map(([name, amount]) => ({ name: name.length > 22 ? name.substring(0, 22) + '…' : name, amount }));
   }, [filteredDonors]);
 
   const byTypeData = useMemo(() => {
@@ -215,12 +215,12 @@ export function Reports() {
         <Card>
           <CardHeader><CardTitle>Sponsorships by Program</CardTitle></CardHeader>
           <CardContent>
-            <div className="h-64">
+            <div style={{ height: Math.max(320, byProgramData.length * 36) }}>
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={byProgramData} layout="vertical" margin={{ left: 20 }}>
+                <BarChart data={byProgramData} layout="vertical" margin={{ left: 10, right: 20, top: 5, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0f0f0" />
                   <XAxis type="number" hide />
-                  <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
+                  <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 10 }} width={140} />
                   <Tooltip formatter={(v) => [`₱${Number(v).toLocaleString()}`, 'Amount']} />
                   <Bar dataKey="amount" fill="#22c55e" radius={[0, 4, 4, 0]} barSize={20} />
                 </BarChart>
@@ -233,7 +233,7 @@ export function Reports() {
         {/* Sponsorships by Type */}
         <Card>
           <CardHeader><CardTitle>Sponsorships by Sponsor Type</CardTitle></CardHeader>
-          <CardContent>
+          <CardContent className="pl-0">
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
