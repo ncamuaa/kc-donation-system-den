@@ -20,7 +20,8 @@ const blankForm = {
   project: 'Video Production',
   projectOther: '',
   campaign_id: '',
-  units: '',
+  unitsCount: '',
+  unitsLabel: '',
   deliveryDate: '',
   dueDate: '',
   amount: '',
@@ -53,7 +54,6 @@ export function Donors() {
   const [form, setForm] = useState(blankForm);
   const setField = (field) => (e) => setForm((prev) => ({ ...prev, [field]: e.target.value }));
 
-  // The known program options (excluding Others)
   const KNOWN_PROGRAMS = [
     'Video Production',
     'Knowledge Channel TV Package (KCTV)',
@@ -63,11 +63,22 @@ export function Donors() {
     'Teacher Training',
   ];
 
-  // When editing, detect if the saved project is a custom "Others" value
   const isKnownProgram = (val) =>
     !val ||
     KNOWN_PROGRAMS.includes(val) ||
     val === 'Others';
+
+  // Parse a stored units string (e.g. "25 episodes Wikaharian2") back into count + label
+  const parseUnits = (val) => {
+    if (!val && val !== 0) return { unitsCount: '', unitsLabel: '' };
+    const str = String(val).trim();
+    const match = str.match(/^(\d+)\s*(.*)$/);
+    if (match) {
+      return { unitsCount: match[1], unitsLabel: match[2].trim() };
+    }
+    // No leading number — treat whole string as label
+    return { unitsCount: '', unitsLabel: str };
+  };
 
   const formatDate = (val) => {
     if (!val) return '-';
@@ -161,9 +172,10 @@ export function Donors() {
   const handleEditDonor = (donor) => {
     setCurrentDonor(donor);
 
-    // Determine if the saved project is a custom value (not in the known list)
     const savedProject = donor.project || 'Video Production';
     const isCustom = !isKnownProgram(savedProject);
+
+    const { unitsCount, unitsLabel } = parseUnits(donor.units);
 
     setForm({
       sponsor:      donor.sponsor      || '',
@@ -172,7 +184,8 @@ export function Donors() {
       project:      isCustom ? 'Others' : savedProject,
       projectOther: isCustom ? savedProject : '',
       campaign_id:  donor.campaign_id  ? String(donor.campaign_id) : '',
-      units:        donor.units        != null ? String(donor.units) : '',
+      unitsCount,
+      unitsLabel,
       deliveryDate: donor.deliveryDate ? String(donor.deliveryDate).slice(0, 10) : '',
       dueDate:      donor.dueDate      ? String(donor.dueDate).slice(0, 10) : '',
       amount:       donor.amount       != null ? String(donor.amount) : '',
@@ -194,12 +207,19 @@ export function Donors() {
     navigate('/campaigns', { state: { openCampaignId: campaignId } });
   };
 
-  // Resolve the final project value: if "Others", use the custom text field
   const resolveProject = () => {
     if (form.project === 'Others') {
       return form.projectOther.trim() || 'Others';
     }
     return form.project;
+  };
+
+  // Combine unitsCount + unitsLabel into a single stored string
+  const resolveUnits = () => {
+    const count = form.unitsCount.trim();
+    const label = form.unitsLabel.trim();
+    if (!count && !label) return null;
+    return [count, label].filter(Boolean).join(' ');
   };
 
   const handleSubmit = async (e) => {
@@ -212,7 +232,7 @@ export function Donors() {
       email:        form.email        || null,
       project:      resolveProject(),
       campaign_id:  form.campaign_id  ? Number(form.campaign_id) : null,
-      units:        Number(form.units    || 0),
+      units:        resolveUnits(),
       deliveryDate: form.deliveryDate || null,
       dueDate:      form.dueDate      || null,
       amount:       Number(form.amount   || 0),
@@ -664,7 +684,6 @@ const handleDownloadSummary = () => {
                 </div>
               </div>
 
-              {/* ── Program field with "Others" expansion ── */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1">Program</label>
                 <Select
@@ -673,7 +692,6 @@ const handleDownloadSummary = () => {
                     setForm((prev) => ({
                       ...prev,
                       project: e.target.value,
-                      // Clear custom text when switching away from Others
                       projectOther: e.target.value !== 'Others' ? '' : prev.projectOther,
                     }));
                   }}
@@ -685,7 +703,6 @@ const handleDownloadSummary = () => {
                     { label: 'Others', value: 'Others' },
                   ]}
                 />
-                {/* Show text input only when "Others" is selected */}
                 {form.project === 'Others' && (
                   <div className="mt-2">
                     <Input
@@ -705,31 +722,58 @@ const handleDownloadSummary = () => {
                 </label>
                 <Select value={form.campaign_id} onChange={setField('campaign_id')} options={campaignOptions} />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Number of Beneficiaries</label>
-                  <Input type="number" value={form.units} onChange={setField('units')} placeholder="Enter number" />
+
+              {/* ── Number of Beneficiaries: count + label side by side ── */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Number of Beneficiaries</label>
+                <div className="flex gap-2">
+                  <Input
+                    type="number"
+                    value={form.unitsCount}
+                    onChange={setField('unitsCount')}
+                    placeholder="0"
+                    className="w-24 shrink-0"
+                    min="0"
+                  />
+                  <Input
+                    value={form.unitsLabel}
+                    onChange={setField('unitsLabel')}
+                    placeholder="e.g. episodes, ES, units for 3 ES…"
+                    className="flex-1"
+                  />
                 </div>
+                {(form.unitsCount || form.unitsLabel) && (
+                  <p className="mt-1.5 text-xs text-gray-400">
+                    Preview: <span className="font-medium text-gray-600">
+                      {[form.unitsCount, form.unitsLabel].filter(Boolean).join(' ')}
+                    </span>
+                  </p>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1">Date of Payment</label>
                   <Input type="date" value={form.deliveryDate} onChange={setField('deliveryDate')} />
                 </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1">Due Date</label>
                   <Input type="date" value={form.dueDate} onChange={setField('dueDate')} />
                 </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1">Amount (₱)</label>
                   <Input type="number" value={form.amount} onChange={setField('amount')} placeholder="0" />
                 </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1">Number of Tranches</label>
                   <Input type="number" value={form.tranches} onChange={setField('tranches')} placeholder="Enter number" />
                 </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1">Source of Funds</label>
                   <Select value={form.type} onChange={setField('type')}
@@ -743,17 +787,18 @@ const handleDownloadSummary = () => {
                     ]}
                   />
                 </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Status</label>
+                  <Select value={form.status} onChange={setField('status')}
+                    options={[
+                      { label: 'Active', value: 'Active' },
+                      { label: 'Completed', value: 'Completed' },
+                      { label: 'Inactive', value: 'Inactive' },
+                    ]}
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Status</label>
-                <Select value={form.status} onChange={setField('status')}
-                  options={[
-                    { label: 'Active', value: 'Active' },
-                    { label: 'Completed', value: 'Completed' },
-                    { label: 'Inactive', value: 'Inactive' },
-                  ]}
-                />
-              </div>
+
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1">Project Description</label>
                 <textarea
@@ -853,7 +898,7 @@ const handleDownloadSummary = () => {
                   <div className="grid grid-cols-2 gap-3">
                     {[
                       { label: 'Type',           value: currentDonor.type },
-                      { label: 'Schools / PMLs', value: currentDonor.units ?? '—' },
+                      { label: 'Beneficiaries',  value: currentDonor.units ?? '—' },
                       { label: 'Payment Date',   value: formatDate(currentDonor.deliveryDate) },
                       { label: 'Due Date',       value: formatDate(currentDonor.dueDate) },
                       { label: 'Tranches',       value: currentDonor.tranches ?? '—' },

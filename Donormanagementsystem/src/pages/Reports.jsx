@@ -22,30 +22,14 @@ const normalizeStatus = (s) => {
 };
 
 export function Reports() {
-  const { donations, donors } = useData();
+  const { donors } = useData();
 
   // ─── SHARED FILTERS ───────────────────────────────────────────────────────
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [campaignFilter, setCampaignFilter] = useState('All');
   const [typeFilter, setTypeFilter] = useState('All');
 
   // ─── FILTERED DATA ────────────────────────────────────────────────────────
-  const filteredDonations = useMemo(() => {
-    return donations.filter((d) => {
-      const date = new Date(d.date);
-      const afterStart = !startDate || date >= new Date(startDate);
-      const beforeEnd = !endDate || date <= new Date(endDate);
-      const matchesCampaign = campaignFilter === 'All' || d.campaign === campaignFilter;
-      return afterStart && beforeEnd && matchesCampaign;
-    });
-  }, [donations, startDate, endDate, campaignFilter]);
-
-  const completedDonations = useMemo(
-    () => filteredDonations.filter((d) => d.status === 'Completed'),
-    [filteredDonations]
-  );
-
   const filteredDonors = useMemo(() => {
     return donors.filter((d) => {
       const date = new Date(d.deliveryDate);
@@ -56,52 +40,30 @@ export function Reports() {
     });
   }, [donors, startDate, endDate, typeFilter]);
 
-  const campaignList = useMemo(
-    () => [...new Set(donations.map((d) => d.campaign).filter(Boolean))],
-    [donations]
-  );
-
-  // ─── COMBINED STATS ───────────────────────────────────────────────────────
-  const donTotalRaised = completedDonations.reduce((s, d) => s + Number(d.amount || 0), 0);
-  const donUniqueDonors = useMemo(() => new Set(filteredDonations.map((d) => d.donor).filter(Boolean)).size, [filteredDonations]);
-  const donPending = filteredDonations.filter((d) => d.status === 'Pending').length;
-
+  // ─── STATS ────────────────────────────────────────────────────────────────
   const sponTotal = filteredDonors.reduce((s, d) => s + Number(d.amount || 0), 0);
   const sponActive = filteredDonors.filter((d) => normalizeStatus(d.status) === 'Active').length;
   const sponCompleted = filteredDonors.filter((d) => normalizeStatus(d.status) === 'Completed').length;
-
-  const combinedTotal = donTotalRaised + sponTotal;
+  const sponInactive = filteredDonors.filter((d) => normalizeStatus(d.status) === 'Inactive').length;
 
   // ─── CHART DATA ───────────────────────────────────────────────────────────
   const monthlyTrendData = useMemo(() => MONTHS.map((month, i) => ({
     name: month,
-    'Online Donations': completedDonations
-      .filter((d) => new Date(d.date).getMonth() === i)
-      .reduce((s, d) => s + Number(d.amount || 0), 0),
-    'Sponsorships': filteredDonors
+    Sponsorships: filteredDonors
       .filter((d) => new Date(d.deliveryDate).getMonth() === i)
       .reduce((s, d) => s + Number(d.amount || 0), 0),
-  })), [completedDonations, filteredDonors]);
+  })), [filteredDonors]);
 
   const byProgramData = useMemo(() => {
     const map = new Map();
-    completedDonations.forEach((d) => {
-      const k = d.campaign || 'Unknown';
+    filteredDonors.forEach((d) => {
+      const k = d.project || 'Unknown';
       map.set(k, (map.get(k) || 0) + Number(d.amount || 0));
     });
     return Array.from(map.entries())
       .sort((a, b) => b[1] - a[1])
       .map(([name, amount]) => ({ name: name.length > 18 ? name.substring(0, 18) + '...' : name, amount }));
-  }, [completedDonations]);
-
-  const byChannelData = useMemo(() => {
-    const map = new Map();
-    filteredDonations.forEach((d) => {
-      const k = d.channel || 'Unknown';
-      map.set(k, (map.get(k) || 0) + 1);
-    });
-    return Array.from(map.entries()).map(([name, value]) => ({ name, value }));
-  }, [filteredDonations]);
+  }, [filteredDonors]);
 
   const byTypeData = useMemo(() => {
     const map = new Map();
@@ -112,15 +74,6 @@ export function Reports() {
     return Array.from(map.entries()).map(([name, value]) => ({ name, value }));
   }, [filteredDonors]);
 
-  const donStatusData = useMemo(() => {
-    const map = new Map();
-    filteredDonations.forEach((d) => {
-      const k = d.status || 'Unknown';
-      map.set(k, (map.get(k) || 0) + 1);
-    });
-    return Array.from(map.entries()).map(([name, value]) => ({ name, value }));
-  }, [filteredDonations]);
-
   const sponStatusData = useMemo(() => {
     const map = new Map();
     filteredDonors.forEach((d) => {
@@ -130,34 +83,7 @@ export function Reports() {
     return Array.from(map.entries()).map(([name, value]) => ({ name, value }));
   }, [filteredDonors]);
 
-  // ─── EXPORTS ──────────────────────────────────────────────────────────────
-  const handleExportAll = () => {
-    const donRows = filteredDonations.map((d) =>
-      ['Donation', d.donor, d.amount, d.campaign || '-', d.channel || '-', d.status, d.date || '-', '-', '-'].join(',')
-    );
-    const sponRows = filteredDonors.map((d) =>
-      ['Sponsorship', d.sponsor, d.amount, d.project || '-', d.type || '-', normalizeStatus(d.status), d.deliveryDate || '-', d.dueDate || '-', d.contact || '-'].join(',')
-    );
-    const headers = 'Type,Name,Amount,Campaign/Project,Channel/Type,Status,Date/Delivery,Due Date,Contact';
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(
-      new Blob([[headers, ...donRows, ...sponRows].join('\n')], { type: 'text/csv' })
-    );
-    a.download = 'combined-report.csv';
-    a.click();
-  };
-
-  const handleExportDonations = () => {
-    const headers = ['ID','Donor','Amount','Type','Campaign','Channel','Status','Date'];
-    const rows = filteredDonations.map((d) =>
-      [d.id, d.donor, d.amount, d.type, d.campaign, d.channel, d.status, d.date].join(',')
-    );
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([[headers.join(','), ...rows].join('\n')], { type: 'text/csv' }));
-    a.download = 'donations-report.csv';
-    a.click();
-  };
-
+  // ─── EXPORT ───────────────────────────────────────────────────────────────
   const handleExportSponsorships = () => {
     const headers = ['ID','Project','Sponsor','Amount','Type','Status','Delivery Date','Due Date'];
     const rows = filteredDonors.map((d) =>
@@ -176,14 +102,14 @@ export function Reports() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Reports & Analytics</h1>
-          <p className="text-sm text-gray-500">Combined view of donations and sponsorship records.</p>
+          <p className="text-sm text-gray-500">Overview of sponsorship records.</p>
         </div>
-        <Button variant="secondary" onClick={handleExportAll}>
-          <Download className="h-4 w-4 mr-2" /> Export All CSV
+        <Button variant="secondary" onClick={handleExportSponsorships}>
+          <Download className="h-4 w-4 mr-2" /> Export CSV
         </Button>
       </div>
 
-      {/* ─── SHARED FILTERS ──────────────────────────────────────────────────── */}
+      {/* ─── FILTERS ─────────────────────────────────────────────────────────── */}
       <Card>
         <CardContent className="p-4">
           <div className="flex flex-wrap gap-4 items-center">
@@ -196,14 +122,7 @@ export function Reports() {
             <Input type="date" className="w-auto" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
             <div className="flex items-center gap-2 ml-2">
               <Filter className="h-4 w-4 text-gray-500" />
-              <span className="text-sm font-medium text-gray-700">Campaign:</span>
-            </div>
-            <div className="w-44">
-              <Select
-                value={campaignFilter}
-                onChange={(e) => setCampaignFilter(e.target.value)}
-                options={[{ label: 'All Campaigns', value: 'All' }, ...campaignList.map((c) => ({ label: c, value: c }))]}
-              />
+              <span className="text-sm font-medium text-gray-700">Type:</span>
             </div>
             <div className="w-44">
               <Select
@@ -222,7 +141,7 @@ export function Reports() {
             </div>
             <Button
               variant="secondary"
-              onClick={() => { setStartDate(''); setEndDate(''); setCampaignFilter('All'); setTypeFilter('All'); }}
+              onClick={() => { setStartDate(''); setEndDate(''); setTypeFilter('All'); }}
             >
               Reset
             </Button>
@@ -230,52 +149,48 @@ export function Reports() {
         </CardContent>
       </Card>
 
-      {/* ─── COMBINED SUMMARY STATS ───────────────────────────────────────────── */}
+      {/* ─── SUMMARY STATS ───────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-5">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Combined Total</p>
-            <p className="mt-2 text-2xl font-bold text-gray-900">₱{combinedTotal.toLocaleString()}</p>
-            <p className="text-xs text-gray-400 mt-1">Donations + Sponsorships</p>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Total Amount</p>
+            <p className="mt-2 text-2xl font-bold text-gray-900">₱{sponTotal.toLocaleString()}</p>
+            <p className="text-xs text-gray-400 mt-1">All sponsorships</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-5">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Online Donations</p>
-            <p className="mt-2 text-2xl font-bold text-blue-600">₱{donTotalRaised.toLocaleString()}</p>
-            <p className="text-xs text-gray-400 mt-1">{donUniqueDonors} unique donors · {donPending} pending</p>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Active</p>
+            <p className="mt-2 text-2xl font-bold text-blue-600">{sponActive}</p>
+            <p className="text-xs text-gray-400 mt-1">Active sponsorships</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-5">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Sponsorships</p>
-            <p className="mt-2 text-2xl font-bold text-green-600">₱{sponTotal.toLocaleString()}</p>
-            <p className="text-xs text-gray-400 mt-1">{sponActive} active · {sponCompleted} completed</p>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Completed</p>
+            <p className="mt-2 text-2xl font-bold text-green-600">{sponCompleted}</p>
+            <p className="text-xs text-gray-400 mt-1">Fully delivered</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-5">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Total Records</p>
-            <p className="mt-2 text-2xl font-bold text-gray-900">{filteredDonations.length + filteredDonors.length}</p>
-            <p className="text-xs text-gray-400 mt-1">{filteredDonations.length} donations · {filteredDonors.length} sponsorships</p>
+            <p className="mt-2 text-2xl font-bold text-gray-900">{filteredDonors.length}</p>
+            <p className="text-xs text-gray-400 mt-1">{sponInactive} inactive</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* ─── MONTHLY TREND (COMBINED) ─────────────────────────────────────────── */}
+      {/* ─── MONTHLY TREND ───────────────────────────────────────────────────── */}
       <Card>
         <CardHeader>
-          <CardTitle>Monthly Trend — Online Donations vs Sponsorships</CardTitle>
+          <CardTitle>Sponsorship Amount by Month (Payment Date)</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={monthlyTrendData}>
                 <defs>
-                  <linearGradient id="colDon" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2} />
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                  </linearGradient>
                   <linearGradient id="colSpon" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#22c55e" stopOpacity={0.2} />
                     <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
@@ -286,7 +201,6 @@ export function Reports() {
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11 }} tickFormatter={(v) => `₱${v}`} />
                 <Tooltip formatter={(v) => `₱${Number(v).toLocaleString()}`} />
                 <Legend />
-                <Area type="monotone" dataKey="Online Donations" stroke="#3b82f6" strokeWidth={2} fill="url(#colDon)" />
                 <Area type="monotone" dataKey="Sponsorships" stroke="#22c55e" strokeWidth={2} fill="url(#colSpon)" />
               </AreaChart>
             </ResponsiveContainer>
@@ -297,9 +211,9 @@ export function Reports() {
       {/* ─── CHARTS ROW ──────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-        {/* Donations by Program */}
+        {/* Sponsorships by Program */}
         <Card>
-          <CardHeader><CardTitle>Donations by Program</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Sponsorships by Program</CardTitle></CardHeader>
           <CardContent>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
@@ -307,8 +221,8 @@ export function Reports() {
                   <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0f0f0" />
                   <XAxis type="number" hide />
                   <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
-                  <Tooltip formatter={(v) => [`₱${Number(v).toLocaleString()}`, 'Raised']} />
-                  <Bar dataKey="amount" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={20} />
+                  <Tooltip formatter={(v) => [`₱${Number(v).toLocaleString()}`, 'Amount']} />
+                  <Bar dataKey="amount" fill="#22c55e" radius={[0, 4, 4, 0]} barSize={20} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -341,117 +255,32 @@ export function Reports() {
           </CardContent>
         </Card>
 
-        {/* Donations by Channel */}
-        <Card>
-          <CardHeader><CardTitle>Donations by Channel</CardTitle></CardHeader>
-          <CardContent>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={byChannelData} cx="50%" cy="50%" innerRadius={55} outerRadius={90} paddingAngle={5} dataKey="value" label>
-                    {byChannelData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="flex flex-wrap justify-center gap-3 mt-2">
-              {byChannelData.map((e, i) => (
-                <div key={e.name} className="flex items-center text-sm">
-                  <div className="w-3 h-3 rounded-full mr-1" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                  {e.name} ({e.value})
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Status side by side */}
+        {/* Status Breakdown */}
         <Card>
           <CardHeader><CardTitle>Status Breakdown</CardTitle></CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Online Donations</p>
-              <div className="h-32">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={donStatusData}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11 }} />
-                    <YAxis axisLine={false} tickLine={false} allowDecimals={false} tick={{ fontSize: 11 }} />
-                    <Tooltip />
-                    <Bar dataKey="value" radius={[4, 4, 0, 0]} barSize={40}>
-                      {donStatusData.map((e, i) => (
-                        <Cell key={i} fill={e.name === 'Completed' ? '#22c55e' : e.name === 'Pending' ? '#eab308' : '#ef4444'} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide pt-2">Sponsorships</p>
-              <div className="h-32">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={sponStatusData}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11 }} />
-                    <YAxis axisLine={false} tickLine={false} allowDecimals={false} tick={{ fontSize: 11 }} />
-                    <Tooltip />
-                    <Bar dataKey="value" radius={[4, 4, 0, 0]} barSize={40}>
-                      {sponStatusData.map((e, i) => (
-                        <Cell key={i} fill={e.name === 'Completed' ? '#22c55e' : e.name === 'Active' ? '#3b82f6' : '#6b7280'} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+            <div className="h-52">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={sponStatusData}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11 }} />
+                  <YAxis axisLine={false} tickLine={false} allowDecimals={false} tick={{ fontSize: 11 }} />
+                  <Tooltip />
+                  <Bar dataKey="value" radius={[4, 4, 0, 0]} barSize={48}>
+                    {sponStatusData.map((e, i) => (
+                      <Cell key={i} fill={
+                        e.name === 'Completed' ? '#22c55e' :
+                        e.name === 'Active' ? '#3b82f6' : '#6b7280'
+                      } />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           </CardContent>
         </Card>
-      </div>
 
-      {/* ─── ONLINE DONATIONS TABLE ───────────────────────────────────────────── */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Online Donation Records</CardTitle>
-            <Button variant="secondary" onClick={handleExportDonations}>
-              <Download className="h-4 w-4 mr-2" /> Export CSV
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  {['Donor','Amount','Type','Campaign','Channel','Date','Status'].map((h) => (
-                    <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {filteredDonations.length > 0 ? filteredDonations.map((d) => (
-                  <tr key={d.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900">{d.donor}</td>
-                    <td className="px-4 py-3 text-sm font-semibold text-gray-900">₱{Number(d.amount).toLocaleString()}</td>
-                    <td className="px-4 py-3 text-sm text-gray-500">{d.type}</td>
-                    <td className="px-4 py-3 text-sm text-gray-500">{d.campaign}</td>
-                    <td className="px-4 py-3 text-sm text-gray-500">{d.channel}</td>
-                    <td className="px-4 py-3 text-sm text-gray-500">{d.date}</td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
-                        d.status === 'Completed' ? 'bg-green-100 text-green-800' :
-                        d.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
-                      }`}>{d.status}</span>
-                    </td>
-                  </tr>
-                )) : (
-                  <tr><td colSpan={7} className="px-4 py-8 text-center text-sm text-gray-400">No donations found.</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+      </div>
 
       {/* ─── SPONSORSHIP RECORDS TABLE ────────────────────────────────────────── */}
       <Card>
