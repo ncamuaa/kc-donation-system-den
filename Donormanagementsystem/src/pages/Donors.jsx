@@ -61,6 +61,9 @@ export function Donors() {
     'Knowledge Portable Media Library (KCPML)',
     'KCPML',
     'Teacher Training',
+    'Broadcast',
+    'On the Ground',
+    'Online Conference',
   ];
 
   const isKnownProgram = (val) =>
@@ -217,6 +220,18 @@ export function Donors() {
     return [count, label].filter(Boolean).join(' ');
   };
 
+  // Find campaign from typed title
+  const resolveCampaignId = () => {
+    const title = (form.campaign_id || '').trim();
+    if (!title) return null;
+    // If it's already a numeric ID (editing mode), pass through
+    if (/^\d+$/.test(title)) return Number(title);
+    const match = (campaigns || []).find(
+      (c) => c.title.toLowerCase() === title.toLowerCase()
+    );
+    return match ? Number(match.id) : null;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -226,7 +241,7 @@ export function Donors() {
       contact:      form.contact      || null,
       email:        form.email        || null,
       project:      resolveProject(),
-      campaign_id:  form.campaign_id  ? Number(form.campaign_id) : null,
+      campaign_id:  resolveCampaignId(),
       units:        resolveUnits(),
       deliveryDate: form.deliveryDate || null,
       dueDate:      form.dueDate      || null,
@@ -478,10 +493,41 @@ export function Donors() {
     doc.save(`${fileSafeName}-record-summary.pdf`);
   };
 
-  const campaignOptions = [
-    { label: '— No linked campaign —', value: '' },
-    ...(campaigns || []).map((c) => ({ label: c.title, value: String(c.id) })),
-  ];
+  // Campaign autocomplete state
+  const [campaignSuggestions, setCampaignSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  const handleCampaignInput = (e) => {
+    const val = e.target.value;
+    setForm((prev) => ({ ...prev, campaign_id: val }));
+    if (!val.trim()) {
+      setCampaignSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+    const filtered = (campaigns || []).filter((c) =>
+      c.title.toLowerCase().includes(val.toLowerCase())
+    );
+    setCampaignSuggestions(filtered);
+    setShowSuggestions(filtered.length > 0);
+  };
+
+  const handleSelectCampaign = (campaign) => {
+    setForm((prev) => ({ ...prev, campaign_id: campaign.title }));
+    setCampaignSuggestions([]);
+    setShowSuggestions(false);
+  };
+
+  // When opening the edit modal, convert numeric campaign_id to title for display
+  const getCampaignDisplayValue = () => {
+    const val = form.campaign_id;
+    if (!val) return '';
+    if (/^\d+$/.test(val)) {
+      const match = (campaigns || []).find((c) => String(c.id) === val);
+      return match ? match.title : val;
+    }
+    return val;
+  };
 
   return (
     <div className="space-y-5 px-1">
@@ -693,6 +739,9 @@ export function Donors() {
                     { label: 'Knowledge Channel TV Package (KCTV)', value: 'Knowledge Channel TV Package (KCTV)' },
                     { label: 'Knowledge Portable Media Library (KCPML)', value: 'Knowledge Portable Media Library (KCPML)' },
                     { label: 'Teacher Training', value: 'Teacher Training' },
+                    { label: 'Broadcast', value: 'Broadcast' },
+                    { label: 'On the Ground', value: 'On the Ground' },
+                    { label: 'Online Conference', value: 'Online Conference' },
                     { label: 'Others', value: 'Others' },
                   ]}
                 />
@@ -709,19 +758,69 @@ export function Donors() {
                 )}
               </div>
 
-              {/* Linked Campaign */}
+              {/* Linked Campaign — textbox with autocomplete */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1">
                   Linked Campaign <span className="ml-1 text-xs font-normal text-gray-400">(optional)</span>
                 </label>
-                <Select value={form.campaign_id} onChange={setField('campaign_id')} options={campaignOptions} />
+                <div className="relative">
+                  <Input
+                    value={getCampaignDisplayValue()}
+                    onChange={handleCampaignInput}
+                    onFocus={() => {
+                      const val = getCampaignDisplayValue();
+                      if (val) {
+                        const filtered = (campaigns || []).filter((c) =>
+                          c.title.toLowerCase().includes(val.toLowerCase())
+                        );
+                        setCampaignSuggestions(filtered);
+                        setShowSuggestions(filtered.length > 0);
+                      }
+                    }}
+                    onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                    placeholder="Type to search campaign title..."
+                    className="w-full"
+                  />
+                  {/* Clear button */}
+                  {getCampaignDisplayValue() && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setForm((prev) => ({ ...prev, campaign_id: '' }));
+                        setCampaignSuggestions([]);
+                        setShowSuggestions(false);
+                      }}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-lg leading-none"
+                    >
+                      ×
+                    </button>
+                  )}
+                  {/* Suggestions dropdown */}
+                  {showSuggestions && (
+                    <ul className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                      {campaignSuggestions.map((c) => (
+                        <li key={c.id}>
+                          <button
+                            type="button"
+                            onMouseDown={() => handleSelectCampaign(c)}
+                            className="w-full text-left px-3 py-2.5 text-sm text-gray-800 hover:bg-sky-50 hover:text-sky-700 transition-colors"
+                          >
+                            <span className="font-medium">{c.title}</span>
+                            {c.status && (
+                              <span className="ml-2 text-xs text-gray-400 capitalize">{c.status}</span>
+                            )}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               </div>
 
               {/* ── Number of Beneficiaries: split into count + label ── */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1">Number of Beneficiaries</label>
                 <div className="flex gap-2">
-                  {/* Number field */}
                   <Input
                     type="number"
                     value={form.unitsCount}
@@ -730,7 +829,6 @@ export function Donors() {
                     className="w-24 shrink-0"
                     min="0"
                   />
-                  {/* Label / description field */}
                   <Input
                     value={form.unitsLabel}
                     onChange={setField('unitsLabel')}
@@ -738,7 +836,6 @@ export function Donors() {
                     className="flex-1"
                   />
                 </div>
-                {/* Live preview */}
                 {(form.unitsCount || form.unitsLabel) && (
                   <p className="mt-1.5 text-xs text-gray-400">
                     Preview: <span className="font-medium text-gray-600">
