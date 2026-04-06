@@ -3,6 +3,12 @@ const router = express.Router();
 const pool = require("../config/db");
 const { requireAuth } = require("../middleware/auth");
 
+// Helper — strips ISO timestamps down to YYYY-MM-DD, returns null if empty
+const toDateOnly = (val) => {
+  if (!val) return null;
+  return String(val).slice(0, 10);
+};
+
 const mapCampaign = (row) => ({
   id:          row.id,
   title:       row.title,
@@ -62,22 +68,22 @@ router.post("/", requireAuth, async (req, res) => {
   try {
     const { title, description, target, startDate, endDate, status, sponsor, department } = req.body;
 
-   if (!title) {
-  return res.status(400).json({ message: "title is required" });
-}
+    if (!title) {
+      return res.status(400).json({ message: "title is required" });
+    }
 
     const [result] = await pool.query(
       `INSERT INTO campaigns (title, description, target, start_date, end_date, status, sponsor, department)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         title,
-        description || null,
+        description  || null,
         Number(target || 0),
-        startDate   || null,
-        endDate,
-        status      || "Active",
-        sponsor     || null,
-        department  || null,
+        toDateOnly(startDate),   // ← safe null
+        toDateOnly(endDate),     // ← FIXED: was passing undefined directly
+        status       || "Active",
+        sponsor      || null,
+        department   || null,
       ]
     );
 
@@ -100,13 +106,13 @@ router.put("/:id", requireAuth, async (req, res) => {
        WHERE id=?`,
       [
         title,
-        description || null,
+        description  || null,
         Number(target || 0),
-        startDate   || null,
-        endDate,
-        status      || "Active",
-        sponsor     || null,
-        department  || null,
+        toDateOnly(startDate),   // ← safe null
+        toDateOnly(endDate),     // ← FIXED: was passing undefined directly
+        status       || "Active",
+        sponsor      || null,
+        department   || null,
         req.params.id,
       ]
     );

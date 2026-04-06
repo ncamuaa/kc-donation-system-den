@@ -11,6 +11,13 @@ const toDateOnly = (val) => {
   return String(val).slice(0, 10);
 };
 
+// Helper — safely stores units as a string (e.g. "25 schools", "8 KTVS")
+// Falls back to null if empty
+const toUnitsString = (val) => {
+  if (val === null || val === undefined || String(val).trim() === '') return null;
+  return String(val).trim();
+};
+
 // ── GET all donors — join campaign title ──────────────────────────────────────
 router.get('/', async (req, res) => {
   try {
@@ -66,11 +73,11 @@ router.post('/', async (req, res) => {
     const values = [
       project      || null,
       description  || null,
-      Number(units || 0),
+      toUnitsString(units),          // ← FIXED: stored as string, not Number
       toDateOnly(deliveryDate),
       toDateOnly(dueDate),
       sponsor,
-      Number(amount || 0),
+      Number(amount   || 0),
       type,
       status,
       email        || null,
@@ -86,7 +93,7 @@ router.post('/', async (req, res) => {
       id:           result.insertId,
       project:      project      || null,
       description:  description  || null,
-      units:        Number(units || 0),
+      units:        toUnitsString(units),
       deliveryDate: toDateOnly(deliveryDate),
       dueDate:      toDateOnly(dueDate),
       sponsor,
@@ -149,11 +156,11 @@ router.put('/:id', async (req, res) => {
     const values = [
       project      || null,
       description  || null,
-      Number(units || 0),
+      toUnitsString(units),          // ← FIXED: stored as string, not Number
       toDateOnly(deliveryDate),
       toDateOnly(dueDate),
       sponsor,
-      Number(amount || 0),
+      Number(amount   || 0),
       type,
       status,
       email        || null,
@@ -220,9 +227,9 @@ router.post('/:id/history', async (req, res) => {
       id,
       snapshot.project      || null,
       snapshot.description  || null,
-      Number(snapshot.units || 0),
-      toDateOnly(snapshot.deliveryDate),  // ← fixed
-      toDateOnly(snapshot.dueDate),       // ← fixed
+      toUnitsString(snapshot.units), // ← FIXED: stored as string, not Number
+      toDateOnly(snapshot.deliveryDate),
+      toDateOnly(snapshot.dueDate),
       snapshot.sponsor      || null,
       Number(snapshot.amount || 0),
       snapshot.type         || null,
