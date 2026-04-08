@@ -314,136 +314,305 @@ export function Donors() {
     setIsModalOpen(false);
   };
 
-  const handleDownloadSummary = () => {
-    if (!currentDonor) return;
-    const linkedCampaign = getLinkedCampaign(currentDonor);
-    const doc = new jsPDF({ unit: 'pt', format: 'a4' });
-    const W = 595;
-    const orange = [230, 126, 14], white = [255,255,255], black = [0,0,0], gray = [120,120,120], lightOrange = [255,243,220];
-    doc.setFillColor(...orange); doc.rect(0,0,W,8,'F');
-    doc.addImage(kcLogo,'PNG',30,14,60,60);
-    doc.setTextColor(...black); doc.setFontSize(18); doc.setFont('helvetica','bold');
-    doc.text('SPONSORSHIP RECORD SUMMARY',105,30);
-    doc.setFontSize(8.5); doc.setFont('helvetica','normal'); doc.setTextColor(...gray);
-    doc.text('Knowledge Channel Foundation, Inc.',105,45);
-    doc.text('Congressional Ave., Quezon City, Metro Manila',105,57);
-    doc.text('finance@knowledgechannel.org',105,69);
-    const statNo=`REC-${Math.floor(100000+Math.random()*900000)}`;
-    const today=new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
-    doc.setTextColor(...gray); doc.setFontSize(8); doc.setFont('helvetica','normal');
-    doc.text('Record No.',W-40,35,{align:'right'});
-    doc.setTextColor(...black); doc.setFont('helvetica','bold'); doc.setFontSize(9);
-    doc.text(statNo,W-40,47,{align:'right'});
-    doc.setTextColor(...gray); doc.setFont('helvetica','normal'); doc.setFontSize(8);
-    doc.text('Date',W-40,62,{align:'right'});
-    doc.setTextColor(...black); doc.setFont('helvetica','bold'); doc.setFontSize(9);
-    doc.text(today,W-40,74,{align:'right'});
-    doc.setFillColor(...orange); doc.rect(0,82,W,3,'F');
-    doc.setDrawColor(...orange); doc.setLineWidth(2); doc.line(40,105,40,125);
-    doc.setTextColor(...orange); doc.setFont('helvetica','bold'); doc.setFontSize(9);
-    doc.text('SPONSOR',50,119);
-    doc.setTextColor(...black); doc.setFontSize(14); doc.setFont('helvetica','bold');
-    doc.text(currentDonor.sponsor||'-',40,147);
-    doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(...gray);
-    let sponsorY=162;
-    if(currentDonor.email){doc.text(currentDonor.email,40,sponsorY);sponsorY+=13;}
-    if(currentDonor.contact)doc.text(currentDonor.contact,40,sponsorY);
-    const COL={desc:52,prog:240,due:350,status:435,amt:W-52};
-    const tableTop=192;
-    doc.setFillColor(...orange); doc.rect(40,tableTop,W-80,22,'F');
-    doc.setTextColor(...white); doc.setFont('helvetica','bold'); doc.setFontSize(8.5);
-    doc.text('DESCRIPTION',COL.desc,tableTop+15); doc.text('PROGRAM',COL.prog,tableTop+15);
-    doc.text('DUE DATE',COL.due,tableTop+15); doc.text('STATUS',COL.status,tableTop+15);
-    doc.text('AMOUNT',COL.amt,tableTop+15,{align:'right'});
-    let rowY=tableTop+22;
-    const currentAmt=Number(currentDonor.amount||0);
-    const tranches=Number(currentDonor.tranches)||1;
-    const perTranche=Math.round(currentAmt/tranches);
-    doc.setFillColor(...lightOrange); doc.rect(40,rowY,W-80,38,'F');
-    doc.setDrawColor(...orange); doc.setLineWidth(0.5); doc.rect(40,rowY,W-80,38,'S');
-    doc.setTextColor(...black); doc.setFont('helvetica','bold'); doc.setFontSize(9);
-    doc.text('CURRENT',COL.desc,rowY+13);
-    doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
-    const descLabel=currentDonor.description?String(currentDonor.description).slice(0,30)+(currentDonor.description.length>30?'…':''):'-';
-    doc.setTextColor(...gray); doc.text(descLabel,COL.desc,rowY+25);
-    doc.setTextColor(...black);
-    doc.text(currentDonor.project||'-',COL.prog,rowY+13);
-    doc.text(formatDate(currentDonor.dueDate),COL.due,rowY+13);
-    doc.text(normalizeStatus(currentDonor.status),COL.status,rowY+13);
-    doc.setFont('helvetica','bold');
-    doc.text(`PHP ${currentAmt.toLocaleString()}`,COL.amt,rowY+13,{align:'right'});
-    doc.setFont('helvetica','normal'); doc.setTextColor(...orange); doc.setFontSize(7.5);
-    doc.text(`${tranches} tranche${tranches>1?'s':''} · PHP ${perTranche.toLocaleString()} each`,COL.prog,rowY+27);
-    rowY+=38;
-    if(donorHistory&&donorHistory.length>0){
-      doc.setFillColor(245,230,200); doc.rect(40,rowY,W-80,18,'F');
+  const getImageDataUrl = (url) =>
+  new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      canvas.getContext('2d').drawImage(img, 0, 0);
+      resolve({ dataUrl: canvas.toDataURL('image/jpeg', 0.85), w: img.width, h: img.height });
+    };
+    img.onerror = () => resolve(null);
+    img.src = url;
+  });
+
+const handleDownloadSummary = async () => {
+  if (!currentDonor) return;
+  const linkedCampaign = getLinkedCampaign(currentDonor);
+  const savedAttachments = currentDonor.attachments || [];
+  const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+  const W = 595;
+  const orange = [230, 126, 14], white = [255,255,255], black = [0,0,0], gray = [120,120,120], lightOrange = [255,243,220];
+
+  // ── Header ───────────────────────────────────────────────────────────────
+  doc.setFillColor(...orange); doc.rect(0,0,W,8,'F');
+  doc.addImage(kcLogo,'PNG',30,14,60,60);
+  doc.setTextColor(...black); doc.setFontSize(18); doc.setFont('helvetica','bold');
+  doc.text('SPONSORSHIP RECORD SUMMARY',105,30);
+  doc.setFontSize(8.5); doc.setFont('helvetica','normal'); doc.setTextColor(...gray);
+  doc.text('Knowledge Channel Foundation, Inc.',105,45);
+  doc.text('Congressional Ave., Quezon City, Metro Manila',105,57);
+  doc.text('finance@knowledgechannel.org',105,69);
+  const statNo = `REC-${Math.floor(100000+Math.random()*900000)}`;
+  const today = new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+  doc.setTextColor(...gray); doc.setFontSize(8); doc.setFont('helvetica','normal');
+  doc.text('Record No.',W-40,35,{align:'right'});
+  doc.setTextColor(...black); doc.setFont('helvetica','bold'); doc.setFontSize(9);
+  doc.text(statNo,W-40,47,{align:'right'});
+  doc.setTextColor(...gray); doc.setFont('helvetica','normal'); doc.setFontSize(8);
+  doc.text('Date',W-40,62,{align:'right'});
+  doc.setTextColor(...black); doc.setFont('helvetica','bold'); doc.setFontSize(9);
+  doc.text(today,W-40,74,{align:'right'});
+  doc.setFillColor(...orange); doc.rect(0,82,W,3,'F');
+
+  // ── Sponsor ───────────────────────────────────────────────────────────────
+  doc.setDrawColor(...orange); doc.setLineWidth(2); doc.line(40,105,40,125);
+  doc.setTextColor(...orange); doc.setFont('helvetica','bold'); doc.setFontSize(9);
+  doc.text('SPONSOR',50,119);
+  doc.setTextColor(...black); doc.setFontSize(14); doc.setFont('helvetica','bold');
+  doc.text(currentDonor.sponsor||'-',40,147);
+  doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(...gray);
+  let sponsorY = 162;
+  if (currentDonor.email) { doc.text(currentDonor.email,40,sponsorY); sponsorY+=13; }
+  if (currentDonor.contact) doc.text(currentDonor.contact,40,sponsorY);
+
+  // ── Table header ──────────────────────────────────────────────────────────
+  const COL = {desc:52,prog:240,due:350,status:435,amt:W-52};
+  const tableTop = 192;
+  doc.setFillColor(...orange); doc.rect(40,tableTop,W-80,22,'F');
+  doc.setTextColor(...white); doc.setFont('helvetica','bold'); doc.setFontSize(8.5);
+  doc.text('DESCRIPTION',COL.desc,tableTop+15);
+  doc.text('PROGRAM',COL.prog,tableTop+15);
+  doc.text('DUE DATE',COL.due,tableTop+15);
+  doc.text('STATUS',COL.status,tableTop+15);
+  doc.text('AMOUNT',COL.amt,tableTop+15,{align:'right'});
+
+  // ── Current row ───────────────────────────────────────────────────────────
+  let rowY = tableTop+22;
+  const currentAmt = Number(currentDonor.amount||0);
+  const tranches = Number(currentDonor.tranches)||1;
+  const perTranche = Math.round(currentAmt/tranches);
+  doc.setFillColor(...lightOrange); doc.rect(40,rowY,W-80,38,'F');
+  doc.setDrawColor(...orange); doc.setLineWidth(0.5); doc.rect(40,rowY,W-80,38,'S');
+  doc.setTextColor(...black); doc.setFont('helvetica','bold'); doc.setFontSize(9);
+  doc.text('CURRENT',COL.desc,rowY+13);
+  doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
+  const descLabel = currentDonor.description
+    ? String(currentDonor.description).slice(0,30)+(currentDonor.description.length>30?'…':'')
+    : '-';
+  doc.setTextColor(...gray); doc.text(descLabel,COL.desc,rowY+25);
+  doc.setTextColor(...black);
+  doc.text(currentDonor.project||'-',COL.prog,rowY+13);
+  doc.text(formatDate(currentDonor.dueDate),COL.due,rowY+13);
+  doc.text(normalizeStatus(currentDonor.status),COL.status,rowY+13);
+  doc.setFont('helvetica','bold');
+  doc.text(`PHP ${currentAmt.toLocaleString()}`,COL.amt,rowY+13,{align:'right'});
+  doc.setFont('helvetica','normal'); doc.setTextColor(...orange); doc.setFontSize(7.5);
+  doc.text(`${tranches} tranche${tranches>1?'s':''} · PHP ${perTranche.toLocaleString()} each`,COL.prog,rowY+27);
+  rowY += 38;
+
+  // ── History rows ──────────────────────────────────────────────────────────
+  if (donorHistory && donorHistory.length > 0) {
+    doc.setFillColor(245,230,200); doc.rect(40,rowY,W-80,18,'F');
+    doc.setTextColor(...orange); doc.setFont('helvetica','bold'); doc.setFontSize(7.5);
+    doc.text('EDIT HISTORY (PREVIOUS VERSIONS — FOR REFERENCE ONLY)',COL.desc,rowY+12);
+    rowY += 18;
+    donorHistory.forEach((snap,idx) => {
+      if (idx%2===0) { doc.setFillColor(245,245,245); } else { doc.setFillColor(255,255,255); }
+      doc.rect(40,rowY,W-80,24,'F');
       doc.setTextColor(...orange); doc.setFont('helvetica','bold'); doc.setFontSize(7.5);
-      doc.text('EDIT HISTORY (PREVIOUS VERSIONS — FOR REFERENCE ONLY)',COL.desc,rowY+12);
-      rowY+=18;
-      donorHistory.forEach((snap,idx)=>{
-        if(idx%2===0){doc.setFillColor(245,245,245);}else{doc.setFillColor(255,255,255);}
-        doc.rect(40,rowY,W-80,24,'F');
-        doc.setTextColor(...orange); doc.setFont('helvetica','bold'); doc.setFontSize(7.5);
-        doc.text(`v${donorHistory.length-idx}`,COL.desc,rowY+16);
-        const snapDesc=snap.description?String(snap.description).slice(0,25)+(snap.description.length>25?'…':''):'-';
-        doc.setTextColor(...gray); doc.setFont('helvetica','italic'); doc.setFontSize(8);
-        doc.text(snapDesc,COL.desc+18,rowY+16);
-        doc.setTextColor(100,100,100); doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
-        doc.text(snap.project||'-',COL.prog,rowY+16);
-        doc.text(formatDate(snap.dueDate),COL.due,rowY+16);
-        doc.text(normalizeStatus(snap.status),COL.status,rowY+16);
-        doc.setTextColor(150,150,150); doc.setFont('helvetica','normal');
-        doc.text(`PHP ${Number(snap.amount||0).toLocaleString()}`,COL.amt,rowY+16,{align:'right'});
-        doc.setDrawColor(220,220,220); doc.setLineWidth(0.3); doc.rect(40,rowY,W-80,24,'S');
-        rowY+=24;
-        if(rowY>750){doc.addPage();rowY=40;}
+      doc.text(`v${donorHistory.length-idx}`,COL.desc,rowY+16);
+      const snapDesc = snap.description
+        ? String(snap.description).slice(0,25)+(snap.description.length>25?'…':'')
+        : '-';
+      doc.setTextColor(...gray); doc.setFont('helvetica','italic'); doc.setFontSize(8);
+      doc.text(snapDesc,COL.desc+18,rowY+16);
+      doc.setTextColor(100,100,100); doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
+      doc.text(snap.project||'-',COL.prog,rowY+16);
+      doc.text(formatDate(snap.dueDate),COL.due,rowY+16);
+      doc.text(normalizeStatus(snap.status),COL.status,rowY+16);
+      doc.setTextColor(150,150,150); doc.setFont('helvetica','normal');
+      doc.text(`PHP ${Number(snap.amount||0).toLocaleString()}`,COL.amt,rowY+16,{align:'right'});
+      doc.setDrawColor(220,220,220); doc.setLineWidth(0.3); doc.rect(40,rowY,W-80,24,'S');
+      rowY += 24;
+      if (rowY > 750) { doc.addPage(); rowY = 40; }
+    });
+  }
+
+  // ── Totals ────────────────────────────────────────────────────────────────
+  const historyTotal = donorHistory
+    ? donorHistory.reduce((sum,snap) => sum+Number(snap.amount||0), 0)
+    : 0;
+  const overallTotal = currentAmt + historyTotal;
+  const totTop = rowY+18;
+  doc.setTextColor(...gray); doc.setFont('helvetica','normal'); doc.setFontSize(9);
+  doc.text('Current Record:',340,totTop);
+  doc.setTextColor(...black); doc.setFont('helvetica','bold');
+  doc.text(`PHP ${currentAmt.toLocaleString()}`,W-52,totTop,{align:'right'});
+  doc.setTextColor(...gray); doc.setFont('helvetica','normal'); doc.setFontSize(9);
+  doc.text('Previous Versions:',340,totTop+14);
+  doc.setTextColor(100,100,100); doc.setFont('helvetica','bold');
+  doc.text(`PHP ${historyTotal.toLocaleString()}`,W-52,totTop+14,{align:'right'});
+  doc.setDrawColor(220,220,220); doc.setLineWidth(0.5); doc.line(340,totTop+22,W-52,totTop+22);
+  doc.setFillColor(...orange); doc.rect(300,totTop+28,W-340,26,'F');
+  doc.setTextColor(...white); doc.setFontSize(10); doc.setFont('helvetica','bold');
+  doc.text('OVERALL TOTAL:',312,totTop+46);
+  doc.text(`PHP ${overallTotal.toLocaleString()}`,W-52,totTop+46,{align:'right'});
+
+  // ── Record Details box ────────────────────────────────────────────────────
+  const payTop = totTop+72;
+  doc.setDrawColor(220,220,220); doc.setLineWidth(0.5); doc.roundedRect(40,payTop,W-80,118,4,4,'S');
+  doc.setDrawColor(...orange); doc.setLineWidth(2); doc.line(55,payTop+16,55,payTop+34);
+  doc.setTextColor(...orange); doc.setFont('helvetica','bold'); doc.setFontSize(9);
+  doc.text('RECORD DETAILS',65,payTop+28);
+  const detailFields = [
+    ['Type / Source:', currentDonor.type||'-'],
+    ['Payment Date:', formatDate(currentDonor.deliveryDate)],
+    ['Due Date:', formatDate(currentDonor.dueDate)],
+    ['Beneficiaries:', String(currentDonor.units??'-')],
+    ['Added By:', currentDonor.created_by||'-'],
+  ];
+  if (linkedCampaign) detailFields.push(['Linked Campaign:', linkedCampaign.title]);
+  let detY = payTop+50;
+  detailFields.forEach(([label,value]) => {
+    doc.setTextColor(...gray); doc.setFont('helvetica','normal'); doc.setFontSize(9);
+    doc.text(label,55,detY);
+    doc.setTextColor(...black); doc.setFont('helvetica','bold');
+    doc.text(String(value),175,detY);
+    detY += 15;
+  });
+
+  // ── Footer (page 1) ───────────────────────────────────────────────────────
+  doc.setFillColor(...orange); doc.rect(0,780,W,61,'F');
+  doc.setTextColor(...white); doc.setFont('helvetica','italic'); doc.setFontSize(9);
+  doc.text('Thank you for your generous support of quality education for every Filipino child.',W/2,800,{align:'center'});
+  doc.setFont('helvetica','normal'); doc.setFontSize(8);
+  doc.text('Knowledge Channel Foundation  ·  finance@knowledgechannel.org  ·  www.knowledgechannel.org',W/2,820,{align:'center'});
+
+  // ── Attachments section ───────────────────────────────────────────────────
+  if (savedAttachments.length > 0) {
+    const AW = 595;
+
+    // ── Attachments index page ──────────────────────────────────────────────
+    doc.addPage();
+    doc.setFillColor(...orange); doc.rect(0,0,AW,40,'F');
+    doc.setTextColor(...white); doc.setFont('helvetica','bold'); doc.setFontSize(13);
+    doc.text('ATTACHMENTS',40,26);
+    doc.setFont('helvetica','normal'); doc.setFontSize(9);
+    doc.text(
+      `${savedAttachments.length} file${savedAttachments.length!==1?'s':''} attached to this record`,
+      AW-40,26,{align:'right'}
+    );
+
+    let ay = 68;
+    savedAttachments.forEach((att, idx) => {
+      if (ay > 750) { doc.addPage(); ay = 40; }
+
+      const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(att.name||'');
+      const isPdf   = /\.pdf$/i.test(att.name||'');
+
+      // Row card
+      doc.setFillColor(idx%2===0 ? 252 : 255, idx%2===0 ? 248 : 255, idx%2===0 ? 240 : 255);
+      doc.roundedRect(40,ay,AW-80,30,3,3,'F');
+      doc.setDrawColor(...orange); doc.setLineWidth(0.4);
+      doc.roundedRect(40,ay,AW-80,30,3,3,'S');
+
+      // Number badge
+      doc.setFillColor(...orange); doc.roundedRect(40,ay,28,30,3,3,'F');
+      doc.setTextColor(...white); doc.setFont('helvetica','bold'); doc.setFontSize(9);
+      doc.text(String(idx+1),54,ay+19,{align:'center'});
+
+      // Title
+      const title = att.title||att.name||'Untitled';
+      doc.setTextColor(...black); doc.setFont('helvetica','bold'); doc.setFontSize(9);
+      doc.text(title.length>52 ? title.slice(0,52)+'…' : title, 78, ay+13);
+
+      // Filename + size
+      const meta = [att.name, att.size ? formatFileSize(att.size) : null].filter(Boolean).join(' · ');
+      doc.setTextColor(...gray); doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
+      doc.text(meta.length>65 ? meta.slice(0,65)+'…' : meta, 78, ay+23);
+
+      // Type badge
+      const typeLabel = isPdf ? 'PDF' : isImage ? 'IMAGE' : 'FILE';
+      const typeColor = isPdf ? [220,50,50] : isImage ? [34,150,90] : [100,100,200];
+      doc.setFillColor(...typeColor); doc.roundedRect(AW-88,ay+8,36,14,2,2,'F');
+      doc.setTextColor(...white); doc.setFont('helvetica','bold'); doc.setFontSize(7);
+      doc.text(typeLabel,AW-70,ay+18,{align:'center'});
+
+      // Open link
+      if (att.url) {
+        doc.setTextColor(0,102,204); doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
+        doc.textWithLink('Open ↗',AW-48,ay+13,{url:att.url});
+      }
+
+      ay += 36;
+    });
+
+    // ── Embed image attachments as full pages ───────────────────────────────
+    const imageAttachments = savedAttachments.filter(a =>
+      /\.(jpg|jpeg|png|gif|webp)$/i.test(a.name||'') && a.url
+    );
+
+    for (const att of imageAttachments) {
+      const result = await getImageDataUrl(att.url);
+      if (!result) continue;
+
+      doc.addPage();
+
+      // Page header
+      doc.setFillColor(...orange); doc.rect(0,0,AW,36,'F');
+      doc.setTextColor(...white); doc.setFont('helvetica','bold'); doc.setFontSize(10);
+      doc.text(att.title||att.name||'Attachment',40,23);
+      doc.setFont('helvetica','normal'); doc.setFontSize(8);
+      doc.text(att.name||'',AW-40,23,{align:'right'});
+
+      // Fit image within page
+      const maxW = AW-80;
+      const maxH = 841-36-60;
+      const ratio = Math.min(maxW/result.w, maxH/result.h);
+      const imgW = result.w*ratio;
+      const imgH = result.h*ratio;
+      const imgX = (AW-imgW)/2;
+      doc.addImage(result.dataUrl,'JPEG',imgX,52,imgW,imgH);
+
+      // Caption
+      doc.setTextColor(...gray); doc.setFont('helvetica','italic'); doc.setFontSize(8);
+      doc.text(att.title||att.name||'',AW/2,52+imgH+18,{align:'center'});
+    }
+
+    // ── Non-image files page ────────────────────────────────────────────────
+    const nonImageFiles = savedAttachments.filter(a =>
+      !/\.(jpg|jpeg|png|gif|webp)$/i.test(a.name||'')
+    );
+    if (nonImageFiles.length > 0) {
+      doc.addPage();
+      doc.setFillColor(...orange); doc.rect(0,0,AW,36,'F');
+      doc.setTextColor(...white); doc.setFont('helvetica','bold'); doc.setFontSize(10);
+      doc.text('NON-IMAGE ATTACHMENTS',40,23);
+
+      let ny = 60;
+      doc.setTextColor(...gray); doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
+      doc.text('The following files cannot be embedded directly in this PDF.',40,ny);
+      doc.text('Use the links in the Attachments index page to open them.',40,ny+13);
+      ny += 36;
+
+      nonImageFiles.forEach((att, idx) => {
+        if (ny > 750) { doc.addPage(); ny = 40; }
+        doc.setFillColor(250,250,250);
+        doc.roundedRect(40,ny,AW-80,28,3,3,'F');
+        doc.setDrawColor(220,220,220); doc.setLineWidth(0.3);
+        doc.roundedRect(40,ny,AW-80,28,3,3,'S');
+        doc.setTextColor(...black); doc.setFont('helvetica','bold'); doc.setFontSize(8.5);
+        doc.text(`${idx+1}. ${(att.title||att.name||'Untitled').slice(0,60)}`,52,ny+11);
+        doc.setTextColor(...gray); doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
+        doc.text(att.name||'',52,ny+21);
+        if (att.url) {
+          doc.setTextColor(0,102,204);
+          doc.textWithLink('Open file ↗',AW-52,ny+16,{url:att.url,align:'right'});
+        }
+        ny += 34;
       });
     }
-    const historyTotal=donorHistory?donorHistory.reduce((sum,snap)=>sum+Number(snap.amount||0),0):0;
-    const overallTotal=currentAmt+historyTotal;
-    const totTop=rowY+18;
-    doc.setTextColor(...gray); doc.setFont('helvetica','normal'); doc.setFontSize(9);
-    doc.text('Current Record:',340,totTop);
-    doc.setTextColor(...black); doc.setFont('helvetica','bold');
-    doc.text(`PHP ${currentAmt.toLocaleString()}`,W-52,totTop,{align:'right'});
-    doc.setTextColor(...gray); doc.setFont('helvetica','normal'); doc.setFontSize(9);
-    doc.text('Previous Versions:',340,totTop+14);
-    doc.setTextColor(100,100,100); doc.setFont('helvetica','bold');
-    doc.text(`PHP ${historyTotal.toLocaleString()}`,W-52,totTop+14,{align:'right'});
-    doc.setDrawColor(220,220,220); doc.setLineWidth(0.5); doc.line(340,totTop+22,W-52,totTop+22);
-    doc.setFillColor(...orange); doc.rect(300,totTop+28,W-340,26,'F');
-    doc.setTextColor(...white); doc.setFontSize(10); doc.setFont('helvetica','bold');
-    doc.text('OVERALL TOTAL:',312,totTop+46);
-    doc.text(`PHP ${overallTotal.toLocaleString()}`,W-52,totTop+46,{align:'right'});
-    const payTop=totTop+72;
-    doc.setDrawColor(220,220,220); doc.setLineWidth(0.5); doc.roundedRect(40,payTop,W-80,118,4,4,'S');
-    doc.setDrawColor(...orange); doc.setLineWidth(2); doc.line(55,payTop+16,55,payTop+34);
-    doc.setTextColor(...orange); doc.setFont('helvetica','bold'); doc.setFontSize(9);
-    doc.text('RECORD DETAILS',65,payTop+28);
-    const detailFields=[
-      ['Type / Source:',currentDonor.type||'-'],
-      ['Payment Date:',formatDate(currentDonor.deliveryDate)],
-      ['Due Date:',formatDate(currentDonor.dueDate)],
-      ['Beneficiaries:',String(currentDonor.units??'-')],
-      ['Added By:',currentDonor.created_by||'-'],
-    ];
-    if(linkedCampaign)detailFields.push(['Linked Campaign:',linkedCampaign.title]);
-    let detY=payTop+50;
-    detailFields.forEach(([label,value])=>{
-      doc.setTextColor(...gray); doc.setFont('helvetica','normal'); doc.setFontSize(9);
-      doc.text(label,55,detY);
-      doc.setTextColor(...black); doc.setFont('helvetica','bold');
-      doc.text(String(value),175,detY);
-      detY+=15;
-    });
-    doc.setFillColor(...orange); doc.rect(0,780,W,61,'F');
-    doc.setTextColor(...white); doc.setFont('helvetica','italic'); doc.setFontSize(9);
-    doc.text('Thank you for your generous support of quality education for every Filipino child.',W/2,800,{align:'center'});
-    doc.setFont('helvetica','normal'); doc.setFontSize(8);
-    doc.text('Knowledge Channel Foundation  ·  finance@knowledgechannel.org  ·  www.knowledgechannel.org',W/2,820,{align:'center'});
-    const fileSafeName=String(currentDonor.project||currentDonor.sponsor||'record').toLowerCase().replace(/[^a-z0-9]+/g,'-');
-    doc.save(`${fileSafeName}-record-summary.pdf`);
-  };
+  }
+
+  // ── Save ──────────────────────────────────────────────────────────────────
+  const fileSafeName = String(currentDonor.project||currentDonor.sponsor||'record')
+    .toLowerCase().replace(/[^a-z0-9]+/g,'-');
+  doc.save(`${fileSafeName}-record-summary.pdf`);
+};
 
   // Campaign autocomplete
   const [campaignSuggestions, setCampaignSuggestions] = useState([]);
