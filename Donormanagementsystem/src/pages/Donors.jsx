@@ -15,8 +15,8 @@ import { useAuth } from '../context/AuthContext';
 const PAGE_SIZE = 10;
 
 const blankForm = {
-  contactPerson: '',
   sponsor: '',
+  contactPerson: '',
   contact: '',
   email: '',
   project: 'Video Production',
@@ -126,11 +126,11 @@ export function Donors() {
   };
 
   const statusBadgeVariant = (status) => {
-  const s = normalizeStatus(status);
-  if (s === 'Active' || s === 'Completed') return 'success';
-  if (s === 'On-Going') return 'warning'; // or 'primary' depending on your Badge variants
-  return 'secondary';
-};
+    const s = normalizeStatus(status);
+    if (s === 'Active' || s === 'Completed') return 'success';
+    if (s === 'On-Going') return 'warning';
+    return 'secondary';
+  };
 
   const getLinkedCampaign = (donor) => {
     if (!donor?.campaign_id) return null;
@@ -232,22 +232,22 @@ export function Donors() {
     const isCustom = !isKnownProgram(savedProject);
     const { unitsCount, unitsLabel } = parseUnits(donor.units);
     setForm({
-      sponsor:      donor.sponsor      || '',
+      sponsor:       donor.sponsor       || '',
       contactPerson: donor.contactPerson || '',
-      contact:      donor.contact      || '',
-      email:        donor.email        || '',
-      project:      isCustom ? 'Others' : savedProject,
-      projectOther: isCustom ? savedProject : '',
-      campaign_id:  donor.campaign_id  ? String(donor.campaign_id) : '',
+      contact:       donor.contact       || '',
+      email:         donor.email         || '',
+      project:       isCustom ? 'Others' : savedProject,
+      projectOther:  isCustom ? savedProject : '',
+      campaign_id:   donor.campaign_id   ? String(donor.campaign_id) : '',
       unitsCount,
       unitsLabel,
-      deliveryDate: donor.deliveryDate ? String(donor.deliveryDate).slice(0, 10) : '',
-      dueDate:      donor.dueDate      ? String(donor.dueDate).slice(0, 10) : '',
-      amount:       donor.amount       != null ? String(donor.amount) : '',
-      tranches:     donor.tranches     != null ? String(donor.tranches) : '',
-      type:         donor.type         || 'Government',
-      status:       normalizeStatus(donor.status),
-      description:  donor.description  || '',
+      deliveryDate:  donor.deliveryDate ? String(donor.deliveryDate).slice(0, 10) : '',
+      dueDate:       donor.dueDate      ? String(donor.dueDate).slice(0, 10) : '',
+      amount:        donor.amount       != null ? String(donor.amount) : '',
+      tranches:      donor.tranches     != null ? String(donor.tranches) : '',
+      type:          donor.type         || 'Government',
+      status:        normalizeStatus(donor.status),
+      description:   donor.description  || '',
     });
     setAttachments(
       (donor.attachments || []).map((a) => ({
@@ -333,22 +333,22 @@ export function Donors() {
       url: a.url || null,
     }));
     const newDonor = {
-      id:           currentDonor ? currentDonor.id : undefined,
+      id:            currentDonor ? currentDonor.id : undefined,
+      sponsor:       form.sponsor,
       contactPerson: form.contactPerson || null,
-      sponsor:      form.sponsor,
-      contact:      form.contact      || null,
-      email:        form.email        || null,
-      project:      resolveProject(),
-      campaign_id:  resolveCampaignId(),
-      units:        resolveUnits(),
-      deliveryDate: form.deliveryDate || null,
-      dueDate:      form.dueDate      || null,
-      amount:       Number(form.amount   || 0),
-      tranches:     Number(form.tranches || 0),
-      type:         form.type,
-      status:       normalizeStatus(form.status),
-      description:  form.description  || null,
-      attachments:  serializedAttachments,
+      contact:       form.contact       || null,
+      email:         form.email         || null,
+      project:       resolveProject(),
+      campaign_id:   resolveCampaignId(),
+      units:         resolveUnits(),
+      deliveryDate:  form.deliveryDate || null,
+      dueDate:       form.dueDate      || null,
+      amount:        Number(form.amount   || 0),
+      tranches:      Number(form.tranches || 0),
+      type:          form.type,
+      status:        normalizeStatus(form.status),
+      description:   form.description  || null,
+      attachments:   serializedAttachments,
     };
     if (currentDonor) {
       await saveDonorSnapshot(currentDonor.id, { ...currentDonor });
@@ -386,7 +386,6 @@ export function Donors() {
     const W = 595;
     const orange = [230, 126, 14], white = [255,255,255], black = [0,0,0], gray = [120,120,120], lightOrange = [255,243,220];
 
-    // ── Header ──────────────────────────────────────────────────────────────
     doc.setFillColor(...orange); doc.rect(0,0,W,8,'F');
     doc.addImage(kcLogo,'PNG',30,14,60,60);
     doc.setFontSize(8.5); doc.setFont('helvetica','normal'); doc.setTextColor(...gray);
@@ -405,7 +404,6 @@ export function Donors() {
     doc.text(today,W-40,74,{align:'right'});
     doc.setFillColor(...orange); doc.rect(0,82,W,3,'F');
 
-    // ── Sponsor ──────────────────────────────────────────────────────────────
     doc.setDrawColor(...orange); doc.setLineWidth(2); doc.line(40,105,40,125);
     doc.setTextColor(...orange); doc.setFont('helvetica','bold'); doc.setFontSize(9);
     doc.text('SPONSOR',50,119);
@@ -416,7 +414,6 @@ export function Donors() {
     if (currentDonor.email) { doc.text(currentDonor.email,40,sponsorY); sponsorY+=13; }
     if (currentDonor.contact) doc.text(currentDonor.contact,40,sponsorY);
 
-    // ── Table header ─────────────────────────────────────────────────────────
     const COL = {desc:52,prog:220,due:360,status:450,amt:W-40};
     const tableTop = 192;
     doc.setFillColor(...orange); doc.rect(40,tableTop,W-80,22,'F');
@@ -427,7 +424,6 @@ export function Donors() {
     doc.text('STATUS',COL.status,tableTop+15);
     doc.text('AMOUNT',COL.amt,tableTop+15,{align:'right'});
 
-    // ── Current row ──────────────────────────────────────────────────────────
     let rowY = tableTop+22;
     const currentAmt = Number(currentDonor.amount||0);
     const tranches = Number(currentDonor.tranches)||1;
@@ -451,7 +447,6 @@ export function Donors() {
     doc.text(`${tranches} tranche${tranches>1?'s':''} · PHP ${perTranche.toLocaleString()} each`,COL.prog,rowY+27);
     rowY += 38;
 
-    // ── History rows ─────────────────────────────────────────────────────────
     if (donorHistory && donorHistory.length > 0) {
       doc.setFillColor(245,230,200); doc.rect(40,rowY,W-80,18,'F');
       doc.setTextColor(...orange); doc.setFont('helvetica','bold'); doc.setFontSize(7.5);
@@ -480,7 +475,6 @@ export function Donors() {
       });
     }
 
-    // ── Totals ───────────────────────────────────────────────────────────────
     const historyTotal = donorHistory
       ? donorHistory.reduce((sum,snap) => sum+Number(snap.amount||0), 0)
       : 0;
@@ -500,7 +494,6 @@ export function Donors() {
     doc.text('OVERALL TOTAL:',312,totTop+46);
     doc.text(`PHP ${overallTotal.toLocaleString()}`,W-52,totTop+46,{align:'right'});
 
-    // ── Record Details box ───────────────────────────────────────────────────
     const payTop = totTop+72;
     doc.setDrawColor(220,220,220); doc.setLineWidth(0.5); doc.roundedRect(40,payTop,W-80,118,4,4,'S');
     doc.setDrawColor(...orange); doc.setLineWidth(2); doc.line(55,payTop+16,55,payTop+34);
@@ -508,6 +501,7 @@ export function Donors() {
     doc.text('RECORD DETAILS',65,payTop+28);
     const detailFields = [
       ['Type / Source:', currentDonor.type||'-'],
+      ['Contact Person:', currentDonor.contactPerson||'-'],
       ['Payment Date:', formatDate(currentDonor.deliveryDate)],
       ['Due Date:', formatDate(currentDonor.dueDate)],
       ['Beneficiaries:', String(currentDonor.units??'-')],
@@ -523,14 +517,12 @@ export function Donors() {
       detY += 15;
     });
 
-    // ── Footer ───────────────────────────────────────────────────────────────
     doc.setFillColor(...orange); doc.rect(0,780,W,61,'F');
     doc.setTextColor(...white); doc.setFont('helvetica','italic'); doc.setFontSize(9);
     doc.text('Thank you for your generous support of quality education for every Filipino child.',W/2,800,{align:'center'});
     doc.setFont('helvetica','normal'); doc.setFontSize(8);
     doc.text('Knowledge Channel Foundation  ·  finance@knowledgechannel.org  ·  www.knowledgechannel.org',W/2,820,{align:'center'});
 
-    // ── Attachments ──────────────────────────────────────────────────────────
     if (savedAttachments.length > 0) {
       const AW = 595;
       doc.addPage();
@@ -832,22 +824,20 @@ export function Donors() {
                   <label className="block text-sm font-semibold text-gray-700 mb-1">Name of Sponsor</label>
                   <Input value={form.sponsor} onChange={setField('sponsor')} placeholder="Enter sponsor name" className="w-full" required />
                 </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Contact Person</label>
+                  <Input value={form.contactPerson} onChange={setField('contactPerson')} placeholder="Enter contact person name" className="w-full" />
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Contact Number</label>
+                    <Input value={form.contact} onChange={setField('contact')} placeholder="e.g. 09123456789" />
+                  </div>
                   <div>
-  <label className="block text-sm font-semibold text-gray-700 mb-1">Contact Person</label>
-  <Input value={form.contactPerson} onChange={setField('contactPerson')} placeholder="Enter contact person name" className="w-full" />
-</div>
-<div className="grid grid-cols-2 gap-4">
-  <div>
-    <label className="block text-sm font-semibold text-gray-700 mb-1">Contact Number</label>
-    <Input value={form.contact} onChange={setField('contact')} placeholder="e.g. 09123456789" />
-  </div>
-  <div>
-    <label className="block text-sm font-semibold text-gray-700 mb-1">Email</label>
-    <Input type="email" value={form.email} onChange={setField('email')} placeholder="example@email.com" />
-  </div>
-</div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Email</label>
+                    <Input type="email" value={form.email} onChange={setField('email')} placeholder="example@email.com" />
+                  </div>
+                </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1">Program</label>
                   <Select value={form.project}
@@ -952,11 +942,11 @@ export function Donors() {
                     <label className="block text-sm font-semibold text-gray-700 mb-1">Status</label>
                     <Select value={form.status} onChange={setField('status')}
                       options={[
-  { label: 'Active', value: 'Active' },
-  { label: 'On-Going', value: 'On-Going' },
-  { label: 'Completed', value: 'Completed' },
-  { label: 'Inactive', value: 'Inactive' },
-]}
+                        { label: 'Active', value: 'Active' },
+                        { label: 'On-Going', value: 'On-Going' },
+                        { label: 'Completed', value: 'Completed' },
+                        { label: 'Inactive', value: 'Inactive' },
+                      ]}
                     />
                   </div>
                 </div>
@@ -1057,6 +1047,7 @@ export function Donors() {
                 <div className="min-w-0 flex-1">
                   <h3 className="text-lg font-bold text-gray-900 truncate">{currentDonor.sponsor}</h3>
                   <p className="text-sm text-gray-500 truncate">{currentDonor.project}</p>
+                  {currentDonor.contactPerson && <p className="text-xs text-gray-500 truncate">👤 {currentDonor.contactPerson}</p>}
                   {currentDonor.email && <p className="text-xs text-gray-400 truncate">{currentDonor.email}</p>}
                   {currentDonor.contact && <p className="text-xs text-gray-400 truncate">{currentDonor.contact}</p>}
                   {linkedCampaign && (
@@ -1119,6 +1110,8 @@ export function Donors() {
                   <div className="grid grid-cols-2 gap-3">
                     {[
                       { label: 'Type', value: currentDonor.type },
+                      { label: 'Contact Person', value: currentDonor.contactPerson ?? '—' },
+                      { label: 'Contact Number', value: currentDonor.contact ?? '—' },
                       { label: 'Beneficiaries', value: currentDonor.units ?? '—' },
                       { label: 'Payment Date', value: formatDate(currentDonor.deliveryDate) },
                       { label: 'Due Date', value: formatDate(currentDonor.dueDate) },
