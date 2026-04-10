@@ -15,6 +15,7 @@ import { useAuth } from '../context/AuthContext';
 const PAGE_SIZE = 10;
 
 const blankForm = {
+  contactPerson: '',
   sponsor: '',
   contact: '',
   email: '',
@@ -232,6 +233,7 @@ export function Donors() {
     const { unitsCount, unitsLabel } = parseUnits(donor.units);
     setForm({
       sponsor:      donor.sponsor      || '',
+      contactPerson: donor.contactPerson || '',
       contact:      donor.contact      || '',
       email:        donor.email        || '',
       project:      isCustom ? 'Others' : savedProject,
@@ -332,6 +334,7 @@ export function Donors() {
     }));
     const newDonor = {
       id:           currentDonor ? currentDonor.id : undefined,
+      contactPerson: form.contactPerson || null,
       sponsor:      form.sponsor,
       contact:      form.contact      || null,
       email:        form.email        || null,
@@ -831,14 +834,20 @@ export function Donors() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Contact Number</label>
-                    <Input value={form.contact} onChange={setField('contact')} placeholder="e.g. 09123456789" />
-                  </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Email</label>
-                    <Input type="email" value={form.email} onChange={setField('email')} placeholder="example@email.com" />
-                  </div>
-                </div>
+  <label className="block text-sm font-semibold text-gray-700 mb-1">Contact Person</label>
+  <Input value={form.contactPerson} onChange={setField('contactPerson')} placeholder="Enter contact person name" className="w-full" />
+</div>
+<div className="grid grid-cols-2 gap-4">
+  <div>
+    <label className="block text-sm font-semibold text-gray-700 mb-1">Contact Number</label>
+    <Input value={form.contact} onChange={setField('contact')} placeholder="e.g. 09123456789" />
+  </div>
+  <div>
+    <label className="block text-sm font-semibold text-gray-700 mb-1">Email</label>
+    <Input type="email" value={form.email} onChange={setField('email')} placeholder="example@email.com" />
+  </div>
+</div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1">Program</label>
                   <Select value={form.project}
