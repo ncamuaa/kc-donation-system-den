@@ -59,10 +59,10 @@ export function Dashboard() {
     [currentYearDonors]
   );
 
-  const uniqueSponsors = useMemo(
-    () => new Set(currentYearDonors.map((d) => d.sponsor).filter(Boolean)).size,
-    [currentYearDonors]
-  );
+  const inactiveCount = useMemo(
+  () => currentYearDonors.filter((d) => normalizeStatus(d.status) === 'Inactive').length,
+  [currentYearDonors]
+);
 
   const stats = [
     {
@@ -82,22 +82,22 @@ export function Dashboard() {
       border: 'border-l-4 border-l-blue-500',
     },
     {
-      title: 'Completed Sponsorships',
-      value: completedCount.toString(),
-      change: 'fully delivered',
-      icon: CheckCircle,
-      color: 'bg-purple-50 text-purple-600',
-      border: 'border-l-4 border-l-purple-500',
-    },
-    {
-      title: 'Unique Sponsors',
-      value: uniqueSponsors.toString(),
-      change: 'distinct sponsors',
-      icon: Users,
-      color: 'bg-amber-50 text-amber-600',
-      border: 'border-l-4 border-l-amber-500',
-    },
-  ];
+       title: 'Inactive Sponsorships',
+    value: inactiveCount.toString(),
+    change: 'not currently active',
+    icon: Users,
+    color: 'bg-amber-50 text-amber-600',
+    border: 'border-l-4 border-l-amber-500',
+  },
+  {
+    title: 'Completed Sponsorships',
+    value: completedCount.toString(),
+    change: 'fully delivered',
+    icon: CheckCircle,
+    color: 'bg-purple-50 text-purple-600',
+    border: 'border-l-4 border-l-purple-500',
+  },
+];
 
   // ── Monthly trend by deliveryDate (current year only) ─────────────────────
   const monthlyTrendData = useMemo(() =>
