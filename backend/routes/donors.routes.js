@@ -39,11 +39,10 @@ const parseAttachments = (val) => {
 router.get('/', async (req, res) => {
   try {
     const [rows] = await db.query(`
-      SELECT d.*, c.title AS campaign_title
-      FROM donors d
-      LEFT JOIN campaigns c ON c.id = d.campaign_id
-      ORDER BY d.id DESC
-    `);
+  SELECT d.*, c.title AS campaign_title
+  FROM donors d
+  LEFT JOIN campaigns c ON c.id = d.campaign_id
+`);
 
     // Parse attachments JSON string → array for every row
     const parsed = rows.map((row) => ({
