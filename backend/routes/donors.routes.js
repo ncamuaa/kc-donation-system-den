@@ -74,6 +74,7 @@ router.post('/', async (req, res) => {
       status,
       email,
       contact,
+      contactPerson, 
       tranches,
       campaign_id,
       attachments,   // ← NEW
@@ -88,11 +89,11 @@ router.post('/', async (req, res) => {
 
     const createdBy = req.user?.email || null;
 
-    const sql = `
-      INSERT INTO donors
-        (project, description, units, deliveryDate, dueDate, sponsor, amount, type, status, email, contact, tranches, campaign_id, attachments, created_by)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `;
+ const sql = `
+  INSERT INTO donors
+    (project, description, units, deliveryDate, dueDate, sponsor, amount, type, status, email, contact, contactPerson, tranches, campaign_id, attachments, created_by)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+`;
 
     const values = [
       project      || null,
@@ -106,6 +107,7 @@ router.post('/', async (req, res) => {
       status,
       email        || null,
       contact      || null,
+      contactPerson || null,  
       Number(tranches || 0),
       campaign_id ? Number(campaign_id) : null,
       toAttachmentsJSON(attachments),   // ← NEW
@@ -174,6 +176,7 @@ router.put('/:id', async (req, res) => {
         status       = ?,
         email        = ?,
         contact      = ?,
+        contactPerson = ?,
         tranches     = ?,
         campaign_id  = ?,
         attachments  = ?,
