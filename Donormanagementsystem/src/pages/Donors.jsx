@@ -283,12 +283,28 @@ export function Donors() {
     return [count, label].filter(Boolean).join(' ');
   };
 
+  // ── UPDATED: resolveCampaignId now falls back to matching Program name against Projects ──
   const resolveCampaignId = () => {
+    // 1. If user explicitly set a linked campaign field, use that first
     const title = (form.campaign_id || '').trim();
-    if (!title) return null;
-    if (/^\d+$/.test(title)) return Number(title);
-    const match = (campaigns || []).find((c) => c.title.toLowerCase() === title.toLowerCase());
-    return match ? Number(match.id) : null;
+    if (title) {
+      if (/^\d+$/.test(title)) return Number(title);
+      const match = (campaigns || []).find(
+        (c) => c.title.toLowerCase() === title.toLowerCase()
+      );
+      if (match) return Number(match.id);
+    }
+
+    // 2. Fall back: try to match the selected Program name against a Project title
+    const programName = resolveProject();
+    if (programName && programName !== 'Others') {
+      const match = (campaigns || []).find(
+        (c) => c.title.toLowerCase() === programName.toLowerCase()
+      );
+      if (match) return Number(match.id);
+    }
+
+    return null;
   };
 
   // ── Attachment handlers ───────────────────────────────────────────────────
@@ -507,7 +523,7 @@ export function Donors() {
       ['Beneficiaries:', String(currentDonor.units??'-')],
       ['Added By:', currentDonor.created_by||'-'],
     ];
-    if (linkedCampaign) detailFields.push(['Linked Campaign:', linkedCampaign.title]);
+    if (linkedCampaign) detailFields.push(['Linked Project:', linkedCampaign.title]);
     let detY = payTop+50;
     detailFields.forEach(([label,value]) => {
       doc.setTextColor(...gray); doc.setFont('helvetica','normal'); doc.setFontSize(9);
@@ -674,7 +690,7 @@ export function Donors() {
           <div className="flex flex-col sm:flex-row gap-3 mb-5">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-              <Input placeholder="Search sponsor, program, campaign..." className="pl-9" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+              <Input placeholder="Search sponsor, program, project..." className="pl-9" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
             </div>
             <div className="w-full sm:w-44 shrink-0">
               <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}
@@ -719,7 +735,7 @@ export function Donors() {
                     <div className="divide-y divide-gray-100">
                       <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-2 px-4 py-1 bg-white border-b border-gray-100">
                         <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Program</span>
-                        <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Campaign</span>
+                        <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Project</span>
                         <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide text-right">Amount</span>
                         <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Status</span>
                         <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide text-center">Actions</span>
@@ -839,7 +855,10 @@ export function Donors() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Program</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
+                    Program
+                    <span className="ml-1.5 text-xs font-normal text-violet-500">← links to matching Project</span>
+                  </label>
                   <Select value={form.project}
                     onChange={(e) => setForm((prev) => ({ ...prev, project: e.target.value, projectOther: e.target.value !== 'Others' ? '' : prev.projectOther }))}
                     options={[
@@ -858,10 +877,26 @@ export function Donors() {
                       <Input value={form.projectOther} onChange={setField('projectOther')} placeholder="Please specify the program..." className="w-full" autoFocus />
                     </div>
                   )}
+                  {/* Show matched project hint */}
+                  {form.project && form.project !== 'Others' && (() => {
+                    const matched = (campaigns || []).find(
+                      (c) => c.title.toLowerCase() === form.project.toLowerCase()
+                    );
+                    return matched ? (
+                      <p className="mt-1.5 text-xs text-violet-600 flex items-center gap-1">
+                        <ExternalLink className="h-3 w-3" />
+                        Will link to project: <span className="font-semibold">{matched.title}</span>
+                      </p>
+                    ) : (
+                      <p className="mt-1.5 text-xs text-gray-400">
+                        No matching project found for this program name.
+                      </p>
+                    );
+                  })()}
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1">
-                    Linked Campaign <span className="ml-1 text-xs font-normal text-gray-400">(optional)</span>
+                    Linked Campaign <span className="ml-1 text-xs font-normal text-gray-400">(optional override)</span>
                   </label>
                   <div className="relative">
                     <Input value={getCampaignDisplayValue()} onChange={handleCampaignInput}
@@ -874,7 +909,7 @@ export function Donors() {
                         }
                       }}
                       onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-                      placeholder="Type to search campaign title..." className="w-full" />
+                      placeholder="Override: manually pick a different project..." className="w-full" />
                     {getCampaignDisplayValue() && (
                       <button type="button" onClick={() => { setForm((prev) => ({ ...prev, campaign_id: '' })); setCampaignSuggestions([]); setShowSuggestions(false); }}
                         className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-lg leading-none">×</button>
@@ -1090,7 +1125,7 @@ export function Donors() {
                   </div>
                   {linkedCampaign && (
                     <div className="p-3.5 bg-violet-50 rounded-xl border border-violet-200 shadow-sm">
-                      <p className="text-[10px] text-violet-600 uppercase font-semibold tracking-wide mb-2">Linked Campaign</p>
+                      <p className="text-[10px] text-violet-600 uppercase font-semibold tracking-wide mb-2">Linked Project</p>
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
                           <p className="text-sm font-bold text-violet-900 truncate">{linkedCampaign.title}</p>
