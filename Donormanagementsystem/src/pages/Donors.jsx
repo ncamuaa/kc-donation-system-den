@@ -283,9 +283,9 @@ export function Donors() {
     return [count, label].filter(Boolean).join(' ');
   };
 
-  // ── UPDATED: resolveCampaignId now falls back to matching Program name against Projects ──
+  // ── FIXED: resolveCampaignId no longer auto-links "Others" or custom program names ──
   const resolveCampaignId = () => {
-    // 1. If user explicitly set a linked campaign field, use that first
+    // 1. If user explicitly set a linked campaign via the override field, use that first
     const title = (form.campaign_id || '').trim();
     if (title) {
       if (/^\d+$/.test(title)) return Number(title);
@@ -295,9 +295,14 @@ export function Donors() {
       if (match) return Number(match.id);
     }
 
-    // 2. Fall back: try to match the selected Program name against a Project title
+    // 2. Fall back: only auto-link if the program is a known built-in program name
+    //    (never auto-link "Others" or custom-typed names to any campaign)
     const programName = resolveProject();
-    if (programName && programName !== 'Others') {
+    if (
+      programName &&
+      programName !== 'Others' &&
+      isKnownProgram(programName)
+    ) {
       const match = (campaigns || []).find(
         (c) => c.title.toLowerCase() === programName.toLowerCase()
       );
@@ -309,9 +314,15 @@ export function Donors() {
 
   // ── Attachment handlers ───────────────────────────────────────────────────
 
+  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files || []);
     files.forEach((file) => {
+      if (file.size > MAX_FILE_SIZE) {
+        alert(`"${file.name}" is too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Maximum size is 5MB.`);
+        return;
+      }
       const reader = new FileReader();
       reader.onload = (ev) => {
         const dataUrl = ev.target.result;
@@ -877,7 +888,7 @@ export function Donors() {
                       <Input value={form.projectOther} onChange={setField('projectOther')} placeholder="Please specify the program..." className="w-full" autoFocus />
                     </div>
                   )}
-                  {/* Show matched project hint */}
+                  {/* Show matched project hint — only for known programs, never for Others */}
                   {form.project && form.project !== 'Others' && (() => {
                     const matched = (campaigns || []).find(
                       (c) => c.title.toLowerCase() === form.project.toLowerCase()
@@ -1007,7 +1018,7 @@ export function Donors() {
                     </div>
                     <div className="text-center">
                       <p className="text-sm font-semibold text-gray-700">Click to upload files</p>
-                      <p className="text-xs text-gray-400 mt-0.5">PDF, Word, Excel, images and more</p>
+                      <p className="text-xs text-gray-400 mt-0.5">PDF, Word, Excel, images and more · Max 5MB per file</p>
                     </div>
                     <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileChange}
                       accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.webp,.txt,.csv" />
