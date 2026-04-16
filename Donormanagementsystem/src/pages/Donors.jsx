@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Plus, Search, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Edit, Trash, Eye, Clock, ExternalLink, Paperclip, X, Upload, Download } from 'lucide-react';
+import { Plus, Search, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Edit, Trash, Eye, Clock, ExternalLink, Paperclip, X, Upload, Download, Send } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card, CardContent } from '../components/ui/Card';
