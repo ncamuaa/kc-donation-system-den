@@ -430,7 +430,10 @@ const handleSubmit = async (e) => {
     doc.text('Knowledge Channel Foundation, Inc.',105,45);
     doc.text('Congressional Ave., Quezon City, Metro Manila',105,57);
     doc.text('finance@knowledgechannel.org',105,69);
-    const statNo = `REC-${Math.floor(100000+Math.random()*900000)}`;
+    const recCountKey = 'kc_rec_counter';
+const nextNum = parseInt(localStorage.getItem(recCountKey) || '0', 10) + 1;
+localStorage.setItem(recCountKey, String(nextNum));
+const statNo = `REC-${String(nextNum).padStart(3, '0')}`;
     const today = new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
     doc.setTextColor(...gray); doc.setFontSize(8); doc.setFont('helvetica','normal');
     doc.text('Record No.',W-40,35,{align:'right'});
@@ -692,6 +695,28 @@ const handleSubmit = async (e) => {
     }
     return val;
   };
+  const handleRequestToProceed = (row) => {
+  const linkedCampaign = getLinkedCampaign(row);
+  const subject = encodeURIComponent(
+    `Request to Proceed – ${row.project || 'Sponsorship'} | ${row.sponsor}`
+  );
+  const body = encodeURIComponent(
+    `Good day,\n\nWe would like to formally request approval to proceed with the following sponsorship record:\n\n` +
+    `Sponsor       : ${row.sponsor || '—'}\n` +
+    `Contact Person: ${row.contactPerson || '—'}\n` +
+    `Program       : ${row.project || '—'}\n` +
+    (linkedCampaign ? `Linked Project: ${linkedCampaign.title}\n` : '') +
+    `Amount        : PHP ${Number(row.amount || 0).toLocaleString()}\n` +
+    `Tranches      : ${row.tranches || '—'}\n` +
+    `Payment Date  : ${formatDate(row.deliveryDate)}\n` +
+    `Due Date      : ${formatDate(row.dueDate)}\n` +
+    `Status        : ${normalizeStatus(row.status)}\n` +
+    (row.description ? `\nDescription:\n${row.description}\n` : '') +
+    `\nKindly review and provide your approval at your earliest convenience.\n\n` +
+    `— Knowledge Channel Foundation System`
+  );
+  window.open(`mailto:?subject=${subject}&body=${body}`, '_blank');
+};
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -783,10 +808,11 @@ const handleSubmit = async (e) => {
                             <span className="text-sm font-bold text-gray-900 whitespace-nowrap text-right">₱{Number(row.amount || 0).toLocaleString()}</span>
                             <Badge variant={statusBadgeVariant(row.status)}>{normalizeStatus(row.status)}</Badge>
                             <div className="flex items-center gap-1">
-                              <button onClick={() => handleViewProfile(row)} className="p-1.5 rounded-md text-gray-400 hover:text-sky-600 hover:bg-sky-50 transition-colors" title="View"><Eye className="h-4 w-4" /></button>
-                              <button onClick={() => handleEditDonor(row)} className="p-1.5 rounded-md text-gray-400 hover:text-amber-600 hover:bg-amber-50 transition-colors" title="Edit"><Edit className="h-4 w-4" /></button>
-                              <button onClick={() => handleDeleteDonor(row.id)} className="p-1.5 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors" title="Delete"><Trash className="h-4 w-4" /></button>
-                            </div>
+  <button onClick={() => handleViewProfile(row)} className="p-1.5 rounded-md text-gray-400 hover:text-sky-600 hover:bg-sky-50 transition-colors" title="View"><Eye className="h-4 w-4" /></button>
+  <button onClick={() => handleEditDonor(row)} className="p-1.5 rounded-md text-gray-400 hover:text-amber-600 hover:bg-amber-50 transition-colors" title="Edit"><Edit className="h-4 w-4" /></button>
+  <button onClick={() => handleRequestToProceed(row)} className="p-1.5 rounded-md text-gray-400 hover:text-violet-600 hover:bg-violet-50 transition-colors" title="Request to Proceed"><Send className="h-4 w-4" /></button>
+  <button onClick={() => handleDeleteDonor(row.id)} className="p-1.5 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors" title="Delete"><Trash className="h-4 w-4" /></button>
+</div>
                           </div>
                         );
                       })}
