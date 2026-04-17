@@ -1,14 +1,15 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   AreaChart, Area, PieChart, Pie, Cell
 } from 'recharts';
 import {
-  ArrowUpRight, Users, Activity, Clock, ChevronRight, CheckCircle
+  ArrowUpRight, Users, Activity, Clock, ChevronRight, CheckCircle, Send, X
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { useData } from '../context/DataContext';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const COLORS = ['#0ea5e9', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#f97316', '#06b6d4'];
 
@@ -26,11 +27,62 @@ const parseDateSafe = (val) => {
   return Number.isNaN(d.getTime()) ? null : d;
 };
 
+const formatDate = (val) => {
+  if (!val) return '-';
+  const d = new Date(val);
+  if (Number.isNaN(d.getTime())) return String(val).slice(0, 10);
+  return d.toISOString().split('T')[0];
+};
+
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 export function Dashboard() {
   const { donors } = useData();
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  // ── Due date notification state ───────────────────────────────────────────
+  const [dueNotif, setDueNotif] = useState({ open: false, donors: [] });
+
+  // ── Due date notification effect ──────────────────────────────────────────
+  useEffect(() => {
+    if (!donors || donors.length === 0) return;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+
+    const dueSoon = donors.filter((d) => {
+      if (!d.dueDate) return false;
+      const due = new Date(d.dueDate);
+      due.setHours(0, 0, 0, 0);
+      return (
+        due.getTime() <= tomorrow.getTime() &&
+        normalizeStatus(d.status) !== 'Completed'
+      );
+    });
+
+    if (dueSoon.length === 0) return;
+
+    const notifKey = `due-notif-${today.toISOString().split('T')[0]}`;
+    if (sessionStorage.getItem(notifKey)) return;
+    sessionStorage.setItem(notifKey, '1');
+
+    setTimeout(() => setDueNotif({ open: true, donors: dueSoon }), 800);
+  }, [donors]);
+
+  // ── Due notif email handler ───────────────────────────────────────────────
+  const handleDueNotifEmail = () => {
+    const lines = dueNotif.donors.map((d) =>
+      `• ${d.sponsor} — ${d.project} | Due: ${formatDate(d.dueDate)} | Amount: PHP ${Number(d.amount || 0).toLocaleString()}`
+    ).join('\n');
+    const subject = encodeURIComponent(`⚠️ ${dueNotif.donors.length} Sponsorship Record(s) Due Soon`);
+    const body = encodeURIComponent(
+      `Good day,\n\nThe following sponsorship records are due today or tomorrow:\n\n${lines}\n\nPlease take the necessary action.\n\n— Knowledge Channel Foundation System`
+    );
+    window.open(`mailto:${user?.email || ''}?subject=${subject}&body=${body}`, '_blank');
+    setDueNotif({ open: false, donors: [] });
+  };
 
   // ── Current year filter ────────────────────────────────────────────────────
   const currentYear = new Date().getFullYear();
@@ -60,9 +112,9 @@ export function Dashboard() {
   );
 
   const inactiveCount = useMemo(
-  () => currentYearDonors.filter((d) => normalizeStatus(d.status) === 'Inactive').length,
-  [currentYearDonors]
-);
+    () => currentYearDonors.filter((d) => normalizeStatus(d.status) === 'Inactive').length,
+    [currentYearDonors]
+  );
 
   const stats = [
     {
@@ -82,22 +134,22 @@ export function Dashboard() {
       border: 'border-l-4 border-l-blue-500',
     },
     {
-       title: 'Inactive Sponsorships',
-    value: inactiveCount.toString(),
-    change: 'not currently active',
-    icon: Users,
-    color: 'bg-amber-50 text-amber-600',
-    border: 'border-l-4 border-l-amber-500',
-  },
-  {
-    title: 'Completed Sponsorships',
-    value: completedCount.toString(),
-    change: 'fully delivered',
-    icon: CheckCircle,
-    color: 'bg-purple-50 text-purple-600',
-    border: 'border-l-4 border-l-purple-500',
-  },
-];
+      title: 'Inactive Sponsorships',
+      value: inactiveCount.toString(),
+      change: 'not currently active',
+      icon: Users,
+      color: 'bg-amber-50 text-amber-600',
+      border: 'border-l-4 border-l-amber-500',
+    },
+    {
+      title: 'Completed Sponsorships',
+      value: completedCount.toString(),
+      change: 'fully delivered',
+      icon: CheckCircle,
+      color: 'bg-purple-50 text-purple-600',
+      border: 'border-l-4 border-l-purple-500',
+    },
+  ];
 
   // ── Monthly trend by deliveryDate (current year only) ─────────────────────
   const monthlyTrendData = useMemo(() =>
@@ -397,6 +449,66 @@ export function Dashboard() {
           </table>
         </CardContent>
       </Card>
+
+      {/* ── Due Date Notification Modal ── */}
+      {dueNotif.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setDueNotif({ open: false, donors: [] })}
+          />
+          {/* Card */}
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+            {/* Header */}
+            <div className="bg-amber-500 px-6 py-5 text-center relative">
+              <button
+                onClick={() => setDueNotif({ open: false, donors: [] })}
+                className="absolute right-4 top-4 text-white/70 hover:text-white transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+              <div className="text-4xl mb-2">⚠️</div>
+              <h2 className="text-xl font-bold text-white">Due Date Alert</h2>
+              <p className="text-amber-100 text-sm mt-1">
+                {dueNotif.donors.length} record{dueNotif.donors.length !== 1 ? 's' : ''} due soon or overdue
+              </p>
+            </div>
+            {/* Body */}
+            <div className="px-6 py-4 max-h-64 overflow-y-auto space-y-3">
+              {dueNotif.donors.map((d) => (
+                <div key={d.id} className="flex items-start gap-3 p-3 bg-amber-50 rounded-xl border border-amber-200">
+                  <div className="h-8 w-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-700 text-xs font-bold shrink-0">
+                    {(d.sponsor || '?').charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-gray-900 truncate">{d.sponsor}</p>
+                    <p className="text-xs text-gray-500 truncate">{d.project}</p>
+                    <p className="text-xs text-amber-600 font-semibold mt-0.5">
+                      Due: {formatDate(d.dueDate)} · PHP {Number(d.amount || 0).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-gray-100 flex gap-3">
+              <button
+                onClick={() => setDueNotif({ open: false, donors: [] })}
+                className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+              >
+                Dismiss
+              </button>
+              <button
+                onClick={handleDueNotifEmail}
+                className="flex-1 px-4 py-2.5 rounded-xl bg-amber-500 text-white text-sm font-semibold hover:bg-amber-600 transition-colors flex items-center justify-center gap-2"
+              >
+                <Send className="h-4 w-4" /> Send Email
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
