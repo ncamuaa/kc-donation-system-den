@@ -34,12 +34,12 @@ const formatDate = (val) => {
 export function Reports() {
   const { donors } = useData();
 
-  // ── Global chart filters ──────────────────────────────────────────────────
+
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [typeFilter, setTypeFilter] = useState('All');
 
-  // ── Per-column table filters ──────────────────────────────────────────────
+  
   const [colFilters, setColFilters] = useState({
     project:      '',
     sponsor:      '',
@@ -66,7 +66,7 @@ export function Reports() {
 
   const [currentPage, setCurrentPage] = useState(1);
 
-  // ── Filtered donors for charts ────────────────────────────────────────────
+ 
   const filteredDonors = useMemo(() => {
     return donors.filter((d) => {
       const date = new Date(d.deliveryDate);
@@ -77,7 +77,7 @@ export function Reports() {
     });
   }, [donors, startDate, endDate, typeFilter]);
 
-  // ── Filtered donors for table (applies col filters on top of chart filters) ─
+  
   const tableFilteredDonors = useMemo(() => {
     return filteredDonors.filter((d) => {
       const { project, sponsor, amount, type, status, deliveryDate, dueDate } = colFilters;
@@ -86,7 +86,7 @@ export function Reports() {
       if (sponsor && !String(d.sponsor || '').toLowerCase().includes(sponsor.toLowerCase())) return false;
       if (amount) {
         const amt = Number(d.amount || 0);
-        // support ">500000", "<100000", or plain number match
+     
         const gtMatch = amount.match(/^>\s*(\d+)$/);
         const ltMatch = amount.match(/^<\s*(\d+)$/);
         const eqMatch = amount.match(/^\d+$/);
@@ -158,7 +158,7 @@ export function Reports() {
     setCurrentPage(1);
   };
 
-  // ─── PDF EXPORT ────────────────────────────────────────────────────────────
+
   const handleExportPDF = () => {
     const doc = new jsPDF();
     const pageW = doc.internal.pageSize.getWidth();
@@ -391,14 +391,14 @@ export function Reports() {
     doc.save(`sponsorship-report-${rptNo}.pdf`);
   };
 
-  // Unique values for dropdowns
+
   const uniqueTypes = useMemo(() => [...new Set(donors.map((d) => d.type).filter(Boolean))].sort(), [donors]);
   const uniqueStatuses = ['Active', 'Completed', 'Inactive'];
 
   return (
     <div className="space-y-6">
 
-      {/* ─── HEADER ─────────────────────────────────────────────────────────── */}
+  
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Reports & Analytics</h1>

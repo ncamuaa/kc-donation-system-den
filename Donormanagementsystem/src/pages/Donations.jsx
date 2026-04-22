@@ -80,7 +80,7 @@ export function Donations() {
 
   return (
     <div className="space-y-5 px-1">
-      {/* Header */}
+ 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pt-1">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 leading-tight">Donation Tracking</h1>
@@ -103,7 +103,7 @@ export function Donations() {
         </div>
       </div>
 
-      {/* Tabs */}
+   
       <div className="flex border-b border-gray-200 overflow-x-auto -mb-1">
         {tabs.map((tab) => (
           <button
@@ -128,7 +128,7 @@ export function Donations() {
 
       <Card>
         <CardContent className="p-5">
-          {/* Filters */}
+         
           <div className="flex flex-col lg:flex-row gap-3 mb-5">
             <div className="relative flex-1 min-w-0">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
@@ -175,7 +175,7 @@ export function Donations() {
             </div>
           </div>
 
-          {/* Table */}
+        
           <div className="overflow-x-auto rounded-lg border border-gray-100">
             <table className="min-w-full divide-y divide-gray-100">
               <thead className="bg-gray-50">
@@ -270,7 +270,7 @@ export function Donations() {
         </CardContent>
       </Card>
 
-      {/* Add/Edit Modal */}
+     
       <Modal
         isOpen={isModalOpen}
         onClose={() => { setIsModalOpen(false); setCurrentDonation(null); }}
@@ -375,7 +375,7 @@ export function Donations() {
         </form>
       </Modal>
 
-      {/* Receipt Modal */}
+      
       <Modal isOpen={isReceiptOpen} onClose={() => setIsReceiptOpen(false)} title="Donation Receipt">
         {selectedDonation && (
           <div className="space-y-5">
@@ -416,7 +416,7 @@ export function Donations() {
         )}
       </Modal>
 
-      {/* Notifications Modal */}
+    
       <Modal
         isOpen={isNotificationOpen}
         onClose={() => setIsNotificationOpen(false)}

@@ -6,7 +6,7 @@ export function AuthProvider({ children }) {
   const [token, setToken] = useState(null);
   const [user, setUser] = useState(null);
 
-  // IMPORTANT: prevent redirect before localStorage loads
+
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -17,7 +17,7 @@ export function AuthProvider({ children }) {
       if (storedToken) setToken(storedToken);
       if (storedUser) setUser(JSON.parse(storedUser));
     } catch (e) {
-      // If storage is corrupted, clear it
+  
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       setToken(null);
@@ -41,7 +41,7 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
-  // Prefer token-based auth check (user may be null temporarily)
+
   const isAuthenticated = !!token;
 
   const value = useMemo(

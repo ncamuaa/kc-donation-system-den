@@ -38,7 +38,7 @@ export function Sidebar({ collapsed }) {
         collapsed ? 'w-20' : 'w-64'
       )}
     >
-      {/* Logo area */}
+
       <div
         className={cn(
           'flex items-center border-b border-gray-200 transition-all duration-200',
@@ -55,7 +55,7 @@ export function Sidebar({ collapsed }) {
         />
       </div>
 
-      {/* Nav links */}
+ 
       <div className="flex-1 overflow-y-auto py-4">
         <nav className="px-3 space-y-1">
           {navigation.map((item) => (
@@ -90,7 +90,7 @@ export function Sidebar({ collapsed }) {
         </nav>
       </div>
 
-      {/* Sign out */}
+      
       <div className="p-4 border-t border-gray-200">
         <button
           onClick={handleLogout}

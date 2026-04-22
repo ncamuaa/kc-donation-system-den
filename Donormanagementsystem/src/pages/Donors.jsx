@@ -54,7 +54,7 @@ export function Donors() {
   const [profileTab, setProfileTab] = useState('details');
   const [donorHistory, setDonorHistory] = useState([]);
   const [modalPage, setModalPage] = useState(1);
-  const [dueNotif, setDueNotif] = useState({ open: false, donors: [] }); // ← NEW
+  const [dueNotif, setDueNotif] = useState({ open: false, donors: [] }); 
 
   const [form, setForm] = useState(blankForm);
   const setField = (field) => (e) => setForm((prev) => ({ ...prev, [field]: e.target.value }));
@@ -138,7 +138,6 @@ export function Donors() {
     return (campaigns || []).find((c) => String(c.id) === String(donor.campaign_id)) || null;
   };
 
-  // ── useEffects ────────────────────────────────────────────────────────────
 
   useEffect(() => {
     const openDonorId = location.state?.openDonorId;
@@ -149,7 +148,7 @@ export function Donors() {
 
   useEffect(() => { setCurrentPage(1); }, [searchTerm, typeFilter]);
 
-  // ── Due date notification (modal popup) ──────────────────────────────────
+ 
   useEffect(() => {
     if (!donors || donors.length === 0) return;
     const today = new Date();
@@ -176,7 +175,7 @@ export function Donors() {
     setTimeout(() => setDueNotif({ open: true, donors: dueSoon }), 800);
   }, [donors]);
 
-  // ── Due notif email handler ───────────────────────────────────────────────
+  
   const handleDueNotifEmail = () => {
     const lines = dueNotif.donors.map((d) =>
       `• ${d.sponsor} — ${d.project} | Due: ${formatDate(d.dueDate)} | Amount: PHP ${Number(d.amount || 0).toLocaleString()}`
@@ -189,7 +188,7 @@ export function Donors() {
     setDueNotif({ open: false, donors: [] });
   };
 
-  // ── Filtered + grouped donors ─────────────────────────────────────────────
+  
 
   const filteredDonors = donors.filter((row) => {
     const s = searchTerm.toLowerCase();
@@ -316,7 +315,7 @@ export function Donors() {
     return null;
   };
 
-  // ── Attachment handlers ───────────────────────────────────────────────────
+
 
   const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
@@ -667,7 +666,7 @@ export function Donors() {
     doc.save(`${fileSafeName}-record-summary.pdf`);
   };
 
-  // ── Campaign autocomplete ─────────────────────────────────────────────────
+ 
 
   const [campaignSuggestions, setCampaignSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -720,7 +719,7 @@ export function Donors() {
     window.open(`mailto:?subject=${subject}&body=${body}`, '_blank');
   };
 
-  // ── Render ────────────────────────────────────────────────────────────────
+
 
   return (
     <div className="space-y-5 px-1">

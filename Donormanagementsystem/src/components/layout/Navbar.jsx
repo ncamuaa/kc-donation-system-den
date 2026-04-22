@@ -11,7 +11,7 @@ export function Navbar({ onToggleSidebar }) {
   const [searchOpen, setSearchOpen] = useState(false);
   const searchRef = useRef(null);
 
-  // ── Due date alerts ────────────────────────────────────
+
   const [dismissedIds, setDismissedIds] = useState(() => new Set());
 
   const dueAlerts = useMemo(() => {
@@ -59,7 +59,7 @@ export function Navbar({ onToggleSidebar }) {
     return `mailto:${d.email || ''}?subject=${subject}&body=${body}`;
   };
 
-  // ── Search ─────────────────────────────────────────────
+ 
   const searchResults = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return [];
@@ -101,7 +101,7 @@ export function Navbar({ onToggleSidebar }) {
           <Menu className="h-5 w-5" />
         </button>
 
-        {/* Search */}
+       
         <div className="relative w-full" ref={searchRef}>
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <Search className="h-5 w-5 text-gray-400" />
@@ -146,10 +146,10 @@ export function Navbar({ onToggleSidebar }) {
         </div>
       </div>
 
-      {/* Right: message icon + bell */}
+     
       <div className="relative flex items-center gap-2">
 
-        {/* Messages icon — navigates to communications */}
+      
         <button
           onClick={() => { navigate('/communications'); setOpen(false); }}
           className="relative p-1.5 rounded-full text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
@@ -158,7 +158,7 @@ export function Navbar({ onToggleSidebar }) {
           <MessageSquare className="h-5 w-5" />
         </button>
 
-        {/* Bell */}
+       
         <button onClick={() => setOpen((v) => !v)} className="relative p-1 rounded-full text-gray-400 hover:text-gray-600">
           <Bell className="h-6 w-6" />
           {visibleAlerts.length > 0 && (
@@ -168,11 +168,11 @@ export function Navbar({ onToggleSidebar }) {
           )}
         </button>
 
-        {/* Dropdown */}
+    
         {open && (
           <div className="absolute right-0 top-10 w-96 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
 
-            {/* Due date alerts */}
+       
             <div className="px-4 py-3 border-b border-gray-100">
               <div className="text-sm font-semibold text-gray-900">Due Date Alerts</div>
               <div className="text-xs text-gray-500">

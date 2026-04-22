@@ -36,7 +36,7 @@ export function CampaignDetails() {
   const [linkedDonors, setLinkedDonors] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // ── Find campaign ──────────────────────────────────────────────────────────
+
   useEffect(() => {
     if (campaigns.length === 0) return;
     const found = campaigns.find((c) => String(c.id) === String(id));
@@ -44,15 +44,15 @@ export function CampaignDetails() {
     setLoading(false);
   }, [campaigns, id]);
 
-  // ── Load linked donors for this campaign ───────────────────────────────────
+
   useEffect(() => {
     if (!id) return;
-    // First try from local donors state (fast, no extra request)
+
     const fromState = donors.filter((d) => String(d.campaign_id) === String(id));
     if (fromState.length > 0) {
       setLinkedDonors(fromState);
     } else {
-      // Fallback: fetch from backend endpoint
+
       fetchCampaignDonors(id).then(setLinkedDonors);
     }
   }, [id, donors]);
@@ -78,7 +78,7 @@ export function CampaignDetails() {
     );
   }
 
-  // ── Derived stats from donors ──────────────────────────────────────────────
+
   const raised  = linkedDonors.reduce((s, d) => s + Number(d.amount || 0), 0);
   const target  = Number(campaign.target || 0);
   const percent = target ? Math.min(100, Math.round((raised / target) * 100)) : 0;
@@ -87,12 +87,12 @@ export function CampaignDetails() {
   const completedSponsors = linkedDonors.filter((d) => normalizeStatus(d.status) === 'Completed').length;
   const avgAmount         = linkedDonors.length ? Math.round(raised / linkedDonors.length) : 0;
 
-  // Days left
+  
   const daysLeft = campaign.endDate
     ? Math.max(0, Math.ceil((new Date(campaign.endDate) - new Date()) / (1000 * 60 * 60 * 24)))
     : '—';
 
-  // ── Monthly trend by deliveryDate ──────────────────────────────────────────
+
   const monthlyTrend = MONTHS.map((name, i) => ({
     name,
     amount: linkedDonors
@@ -100,7 +100,7 @@ export function CampaignDetails() {
       .reduce((s, d) => s + Number(d.amount || 0), 0),
   }));
 
-  // ── By sponsor type ────────────────────────────────────────────────────────
+
   const byTypeMap = new Map();
   linkedDonors.forEach((d) => {
     const k = d.type || 'Unknown';
@@ -111,7 +111,7 @@ export function CampaignDetails() {
   return (
     <div className="space-y-6">
 
-      {/* Header */}
+    
       <div className="flex items-center gap-3 flex-wrap">
         <Link to="/campaigns">
           <Button variant="ghost" size="sm">
@@ -126,10 +126,10 @@ export function CampaignDetails() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {/* ── LEFT COLUMN ── */}
+       
         <div className="lg:col-span-2 space-y-6">
 
-          {/* About */}
+        
           <Card>
             <CardHeader>
               <CardTitle>About this Campaign</CardTitle>
@@ -139,7 +139,7 @@ export function CampaignDetails() {
                 {campaign.description || 'No description provided.'}
               </p>
 
-              {/* Meta */}
+          
               {(campaign.sponsor || campaign.department || campaign.startDate) && (
                 <div className="mt-4 flex flex-wrap gap-4 text-sm text-gray-500">
                   {campaign.sponsor && (
@@ -170,7 +170,7 @@ export function CampaignDetails() {
                 </div>
               </div>
 
-              {/* Progress */}
+         
               <div className="mt-5 space-y-1.5">
                 <div className="flex justify-between text-sm">
                   <span className="font-medium text-gray-700">Progress</span>
@@ -181,7 +181,7 @@ export function CampaignDetails() {
             </CardContent>
           </Card>
 
-          {/* Sponsorship Amount Trend */}
+      
           <Card>
             <CardHeader>
               <CardTitle>Sponsorship Amount by Month (Payment Date)</CardTitle>
@@ -210,7 +210,7 @@ export function CampaignDetails() {
             </CardContent>
           </Card>
 
-          {/* Linked Sponsors Table */}
+       
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -259,10 +259,9 @@ export function CampaignDetails() {
           </Card>
         </div>
 
-        {/* ── RIGHT SIDEBAR ── */}
         <div className="space-y-6">
 
-          {/* Actions */}
+         
           <Card>
             <CardHeader><CardTitle>Actions</CardTitle></CardHeader>
             <CardContent className="space-y-3">
@@ -275,7 +274,7 @@ export function CampaignDetails() {
             </CardContent>
           </Card>
 
-          {/* Key Metrics */}
+         
           <Card>
             <CardHeader><CardTitle>Key Metrics</CardTitle></CardHeader>
             <CardContent className="space-y-4">
@@ -297,7 +296,7 @@ export function CampaignDetails() {
             </CardContent>
           </Card>
 
-          {/* By Sponsor Type */}
+          
           {byTypeData.length > 0 && (
             <Card>
               <CardHeader><CardTitle>By Source of Funds</CardTitle></CardHeader>

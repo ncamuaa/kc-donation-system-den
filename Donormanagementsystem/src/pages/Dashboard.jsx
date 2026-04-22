@@ -41,10 +41,10 @@ export function Dashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  // ── Due date notification state ───────────────────────────────────────────
+
   const [dueNotif, setDueNotif] = useState({ open: false, donors: [] });
 
-  // ── Due date notification effect ──────────────────────────────────────────
+
   useEffect(() => {
     if (!donors || donors.length === 0) return;
     const today = new Date();
@@ -71,7 +71,7 @@ export function Dashboard() {
     setTimeout(() => setDueNotif({ open: true, donors: dueSoon }), 800);
   }, [donors]);
 
-  // ── Due notif email handler ───────────────────────────────────────────────
+
   const handleDueNotifEmail = () => {
     const lines = dueNotif.donors.map((d) =>
       `• ${d.sponsor} — ${d.project} | Due: ${formatDate(d.dueDate)} | Amount: PHP ${Number(d.amount || 0).toLocaleString()}`
@@ -84,7 +84,7 @@ export function Dashboard() {
     setDueNotif({ open: false, donors: [] });
   };
 
-  // ── Current year filter ────────────────────────────────────────────────────
+
   const currentYear = new Date().getFullYear();
 
   const currentYearDonors = useMemo(
@@ -95,7 +95,7 @@ export function Dashboard() {
     [donors, currentYear]
   );
 
-  // ── Stats (current year only) ──────────────────────────────────────────────
+ 
   const totalAmount = useMemo(
     () => currentYearDonors.reduce((sum, d) => sum + Number(d.amount || 0), 0),
     [currentYearDonors]
@@ -151,7 +151,7 @@ export function Dashboard() {
     },
   ];
 
-  // ── Monthly trend by deliveryDate (current year only) ─────────────────────
+  
   const monthlyTrendData = useMemo(() =>
     MONTHS.map((name, i) => ({
       name,
@@ -162,7 +162,7 @@ export function Dashboard() {
     [currentYearDonors]
   );
 
-  // ── Amount by program (current year only) ─────────────────────────────────
+
   const byProgramData = useMemo(() => {
     const map = new Map();
     currentYearDonors.forEach((d) => {
@@ -178,7 +178,7 @@ export function Dashboard() {
       }));
   }, [currentYearDonors]);
 
-  // ── By sponsor type / source of funds (current year only) ─────────────────
+
   const byTypeData = useMemo(() => {
     const map = new Map();
     currentYearDonors.forEach((d) => {
@@ -188,7 +188,7 @@ export function Dashboard() {
     return Array.from(map.entries()).map(([name, value]) => ({ name, value }));
   }, [currentYearDonors]);
 
-  // ── By status breakdown (current year only) ───────────────────────────────
+  
   const byStatusData = useMemo(() => {
     const map = new Map();
     currentYearDonors.forEach((d) => {
@@ -198,7 +198,7 @@ export function Dashboard() {
     return Array.from(map.entries()).map(([name, value]) => ({ name, value }));
   }, [currentYearDonors]);
 
-  // ── Recent records (current year only) ────────────────────────────────────
+  
   const recentRecords = useMemo(() =>
     [...currentYearDonors]
       .sort((a, b) => {
@@ -213,7 +213,7 @@ export function Dashboard() {
   return (
     <div className="space-y-6 px-1">
 
-      {/* Header */}
+
       <div className="flex items-center justify-between pt-1">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 leading-tight">Dashboard Overview</h1>
@@ -225,7 +225,7 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* Stats Grid */}
+    
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((item) => (
           <Card key={item.title} className={`overflow-hidden ${item.border}`}>
@@ -250,10 +250,10 @@ export function Dashboard() {
         ))}
       </div>
 
-      {/* Charts Row 1 */}
+    
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
-        {/* Monthly Sponsorship Trend */}
+   
         <Card>
           <CardHeader className="pb-2 pt-5 px-6">
             <CardTitle className="text-base font-semibold text-gray-800">
@@ -289,7 +289,7 @@ export function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Amount by Program */}
+       
         <Card>
           <CardHeader className="pb-2 pt-5 px-6">
             <CardTitle className="text-base font-semibold text-gray-800">
@@ -319,10 +319,10 @@ export function Dashboard() {
         </Card>
       </div>
 
-      {/* Charts Row 2 */}
+     
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
-        {/* By Sponsor Type */}
+        
         <Card className="flex flex-col">
           <CardHeader className="pt-5 pb-2 px-6">
             <CardTitle className="text-base font-semibold text-gray-800">By Source of Funds</CardTitle>
@@ -352,7 +352,7 @@ export function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* By Status */}
+      
         <Card className="lg:col-span-2 flex flex-col">
           <CardHeader className="pt-5 pb-2 px-6">
             <CardTitle className="text-base font-semibold text-gray-800">Sponsorship Status Breakdown</CardTitle>
@@ -369,7 +369,7 @@ export function Dashboard() {
                 </div>
               ))}
             </div>
-            {/* Mini bar chart */}
+          
             <div className="h-28">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={byStatusData}>
@@ -389,7 +389,7 @@ export function Dashboard() {
         </Card>
       </div>
 
-      {/* Recent Records Table */}
+    
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pt-5 pb-3 px-6">
           <CardTitle className="text-base font-semibold text-gray-800">Recent Sponsorship Records</CardTitle>
@@ -450,17 +450,17 @@ export function Dashboard() {
         </CardContent>
       </Card>
 
-      {/* ── Due Date Notification Modal ── */}
+    
       {dueNotif.open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          {/* Backdrop */}
+          
           <div
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             onClick={() => setDueNotif({ open: false, donors: [] })}
           />
-          {/* Card */}
+         
           <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
-            {/* Header */}
+          
             <div className="bg-amber-500 px-6 py-5 text-center relative">
               <button
                 onClick={() => setDueNotif({ open: false, donors: [] })}
@@ -474,7 +474,7 @@ export function Dashboard() {
                 {dueNotif.donors.length} record{dueNotif.donors.length !== 1 ? 's' : ''} due soon or overdue
               </p>
             </div>
-            {/* Body */}
+            
             <div className="px-6 py-4 max-h-64 overflow-y-auto space-y-3">
               {dueNotif.donors.map((d) => (
                 <div key={d.id} className="flex items-start gap-3 p-3 bg-amber-50 rounded-xl border border-amber-200">
@@ -491,7 +491,7 @@ export function Dashboard() {
                 </div>
               ))}
             </div>
-            {/* Footer */}
+         
             <div className="px-6 py-4 border-t border-gray-100 flex gap-3">
               <button
                 onClick={() => setDueNotif({ open: false, donors: [] })}

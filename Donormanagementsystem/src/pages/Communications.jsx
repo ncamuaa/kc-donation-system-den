@@ -22,7 +22,7 @@ const defaultWorkflows = [
   { id: 5, name: 'Progress Report Dispatch', trigger: 'Progress Report Due', status: 'Active', steps: 1, description: 'Sends a program progress report to sponsors at defined intervals.', delay: '0', templateId: null, personInCharge: 'Programs Team', type: 'progress' },
 ];
 
-// ─── BILLING STATEMENT MODAL ──────────────────────────────────────────────────
+
 function BillingStatementModal({ donors, onClose }) {
   const [selectedDonorId, setSelectedDonorId] = useState('');
   const [statementDate, setStatementDate] = useState(new Date().toISOString().split('T')[0]);
@@ -308,7 +308,7 @@ function BillingStatementModal({ donors, onClose }) {
   );
 }
 
-// ─── PROGRESS REPORT MODAL ────────────────────────────────────────────────────
+
 function ProgressReportModal({ donors, campaigns, onClose }) {
   const [selectedCampaignId, setSelectedCampaignId] = useState('');
   const [reportDate, setReportDate] = useState(new Date().toISOString().split('T')[0]);
@@ -652,7 +652,7 @@ function ProgressReportModal({ donors, campaigns, onClose }) {
   );
 }
 
-// ─── TEMPLATE MODAL ───────────────────────────────────────────────────────────
+
 function TemplateModal({ template, onClose, onSave }) {
   const [name, setName] = useState(template?.name || '');
   const [subject, setSubject] = useState(template?.subject || '');
@@ -704,7 +704,7 @@ function TemplateModal({ template, onClose, onSave }) {
   );
 }
 
-// ─── WORKFLOW MODAL ───────────────────────────────────────────────────────────
+
 function WorkflowModal({ workflow, templates, onClose, onSave }) {
   const [name, setName] = useState(workflow?.name || '');
   const [trigger, setTrigger] = useState(workflow?.trigger || 'New Donor Added');
@@ -801,7 +801,7 @@ function WorkflowModal({ workflow, templates, onClose, onSave }) {
   );
 }
 
-// ─── WORKFLOW ICON ────────────────────────────────────────────────────────────
+
 function WorkflowIcon({ workflow }) {
   const isActive = workflow.status === 'Active';
   if (workflow.type === 'billing') return (
@@ -821,7 +821,6 @@ function WorkflowIcon({ workflow }) {
   );
 }
 
-// ─── WORKFLOW CARD ────────────────────────────────────────────────────────────
 function WorkflowCard({ workflow, templates, onConfigure, onTrigger }) {
   const isActive = workflow.status === 'Active';
   const triggerColor = workflow.type === 'billing'
@@ -883,7 +882,6 @@ function WorkflowCard({ workflow, templates, onConfigure, onTrigger }) {
   );
 }
 
-// ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 export function Communications() {
   const { donors, campaigns } = useData();
   const [activeTab, setActiveTab] = useState('templates');

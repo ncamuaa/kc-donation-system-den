@@ -42,13 +42,13 @@ export function Campaigns() {
   const [searchTerm, setSearchTerm] = useState('');
   const [campaignDonorMap, setCampaignDonorMap] = useState({});
 
-  // ── Modal state ────────────────────────────────────────────────────────────
+ 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentCampaign, setCurrentCampaign] = useState(null);
   const [form, setForm] = useState(blankCampaign);
   const setField = (field) => (e) => setForm((prev) => ({ ...prev, [field]: e.target.value }));
 
-  // ── Load donor counts per campaign ─────────────────────────────────────────
+
   useEffect(() => {
     if (!campaigns || campaigns.length === 0) return;
     const loadDonors = async () => {
@@ -64,7 +64,7 @@ export function Campaigns() {
     loadDonors();
   }, [campaigns, donors]);
 
-  // ── Filtered list ──────────────────────────────────────────────────────────
+
   const filteredCampaigns = useMemo(() => {
     const q = searchTerm.toLowerCase();
     return (campaigns || []).filter(c =>
@@ -73,10 +73,9 @@ export function Campaigns() {
     );
   }, [campaigns, searchTerm]);
 
-  // ── Stats ──────────────────────────────────────────────────────────────────
-// REPLACE WITH:
+  
 const totalTarget = useMemo(() => {
-  // Sum targets only for campaigns that have at least one linked donor
+  
   return (campaigns || []).reduce((s, c) => {
     const hasLinkedDonors = (donors || []).some(
       (d) => String(d.campaign_id) === String(c.id)
@@ -93,7 +92,7 @@ const totalTarget = useMemo(() => {
   const activeCount    = useMemo(() => (campaigns || []).filter(c => c.status === 'Active').length, [campaigns]);
   const completedCount = useMemo(() => (campaigns || []).filter(c => c.status === 'Completed').length, [campaigns]);
 
-  // ── Actions ────────────────────────────────────────────────────────────────
+
   const handleAdd = () => {
     setCurrentCampaign(null);
     setForm(blankCampaign);
@@ -132,7 +131,7 @@ const totalTarget = useMemo(() => {
     description: form.description || null,
     target:      Number(form.target || 0),
     startDate:   form.startDate   || null,
-    endDate:     form.endDate     || null,  // ← add fallback
+    endDate:     form.endDate     || null, 
     status:      form.status,
     sponsor:     form.sponsor     || null,
     department:  form.department  || null,
@@ -149,7 +148,7 @@ const totalTarget = useMemo(() => {
   return (
     <div className="space-y-5 px-1">
 
-      {/* Header */}
+     
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pt-1">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 leading-tight">Programs</h1>
@@ -160,7 +159,6 @@ const totalTarget = useMemo(() => {
         </Button>
       </div>
 
-      {/* Search */}
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
         <Input
@@ -171,7 +169,7 @@ const totalTarget = useMemo(() => {
         />
       </div>
 
-      {/* Stats */}
+      
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card><CardContent className="p-5">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Active Programs</p>
@@ -191,7 +189,7 @@ const totalTarget = useMemo(() => {
         </CardContent></Card>
       </div>
 
-      {/* Program Cards */}
+     
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         {filteredCampaigns.map((program) => {
           const raised     = getCampaignDonorTotal(program.id);
@@ -211,7 +209,7 @@ const totalTarget = useMemo(() => {
                       <span className="text-xs text-gray-400 flex items-center gap-1">
                         <Calendar className="h-3 w-3" />{formatDate(program.endDate)}
                       </span>
-                      {/* Edit & Delete buttons */}
+                      
                       <button
                         onClick={(e) => handleEdit(e, program)}
                         className="p-1 rounded-md text-gray-400 hover:text-amber-600 hover:bg-amber-50 transition-colors"
@@ -250,7 +248,7 @@ const totalTarget = useMemo(() => {
 
                   <p className="text-sm text-gray-500 mb-4 line-clamp-2 leading-relaxed">{program.description}</p>
 
-                  {/* Donor count badge */}
+                 
                   <div className="mb-3">
                     <span className="inline-flex items-center gap-1 text-xs font-medium bg-blue-50 text-blue-600 px-2.5 py-1 rounded-full">
                       <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -260,7 +258,7 @@ const totalTarget = useMemo(() => {
                     </span>
                   </div>
 
-                  {/* Progress */}
+                
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="font-semibold text-gray-900">₱{raised.toLocaleString()}</span>
@@ -275,7 +273,7 @@ const totalTarget = useMemo(() => {
           );
         })}
 
-        {/* Add new card */}
+      
         <div
           onClick={handleAdd}
           className="border-dashed border-2 border-gray-200 bg-gray-50 flex items-center justify-center min-h-[220px] rounded-2xl cursor-pointer hover:bg-gray-100 transition-colors"
@@ -291,7 +289,7 @@ const totalTarget = useMemo(() => {
         )}
       </div>
 
-      {/* ── Add / Edit Campaign Modal ── */}
+    
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}

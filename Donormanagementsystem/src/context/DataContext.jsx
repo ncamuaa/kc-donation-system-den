@@ -17,9 +17,7 @@ export const DataProvider = ({ children }) => {
   const [causeMarketing, setCauseMarketing] = useState([]);
   const [donations, setDonations] = useState([]);
 
-  // -------------
-  // DONORS
-  // -------------
+
   const fetchDonors = async () => {
     try {
       const token = getToken();
@@ -107,9 +105,7 @@ export const DataProvider = ({ children }) => {
     }
   };
 
-  // -------------
-  // CAMPAIGNS
-  // -------------
+
   const fetchCampaigns = async () => {
     try {
       const token = getToken();
@@ -154,9 +150,7 @@ export const DataProvider = ({ children }) => {
     } catch (err) { console.error(err); alert("Failed to delete project."); }
   };
 
-  // -------------
-  // EVENTS
-  // -------------
+ 
   const fetchEvents = async () => {
     try {
       const token = getToken();
@@ -207,9 +201,7 @@ export const DataProvider = ({ children }) => {
     } catch (err) { console.error(err); alert("Failed to delete event."); }
   };
 
-  // -------------
-  // CAMPAIGN EVENTS
-  // -------------
+
   const addCampaignEvent = async (payload) => {
     try {
       const token = getToken();
@@ -245,9 +237,7 @@ export const DataProvider = ({ children }) => {
     } catch (err) { console.error(err); alert("Failed to delete campaign event."); }
   };
 
-  // -------------
-  // GRANTS
-  // -------------
+
   const fetchGrants = async () => {
     try {
       const token = getToken();
@@ -292,9 +282,6 @@ export const DataProvider = ({ children }) => {
     } catch (err) { console.error(err); alert("Failed to delete grant."); }
   };
 
-  // -------------
-  // CAUSE MARKETING
-  // -------------
   const fetchCauseMarketing = async () => {
     try {
       const token = getToken();
@@ -339,9 +326,7 @@ export const DataProvider = ({ children }) => {
     } catch (err) { console.error(err); alert("Failed to delete cause marketing entry."); }
   };
 
-  // -------------
-  // DONATIONS
-  // -------------
+
   const fetchDonations = async () => {
     try {
       const token = getToken();
@@ -386,9 +371,7 @@ export const DataProvider = ({ children }) => {
     } catch (err) { console.error(err); alert("Failed to delete donation."); }
   };
 
-  // ── fetch all on login ─────────────────────────────────────────────────────
-  // Removed: fetchCommTemplates, fetchCommWorkflows, fetchCommHistory,
-  //          fetchContactMessages — these routes don't exist on the backend yet
+
   useEffect(() => {
     if (!token) return;
     fetchDonors();
