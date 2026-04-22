@@ -3,7 +3,7 @@ const router = express.Router();
 const pool = require("../config/db");
 const { requireAuth } = require("../middleware/auth");
 
-// Helper — strips ISO timestamps down to YYYY-MM-DD, returns null if empty
+
 const toDateOnly = (val) => {
   if (!val) return null;
   return String(val).slice(0, 10);
@@ -21,7 +21,7 @@ const mapCampaign = (row) => ({
   department:  row.department  || null,
 });
 
-// ── GET all campaigns ─────────────────────────────────────────────────────────
+
 router.get("/", async (req, res) => {
   try {
     const [rows] = await pool.query(
@@ -34,7 +34,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-// ── GET single campaign ───────────────────────────────────────────────────────
+
 router.get("/:id", async (req, res) => {
   try {
     const [rows] = await pool.query(
@@ -49,7 +49,7 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// ── GET donors linked to a campaign ──────────────────────────────────────────
+
 router.get("/:id/donors", async (req, res) => {
   try {
     const [rows] = await pool.query(
@@ -63,7 +63,7 @@ router.get("/:id/donors", async (req, res) => {
   }
 });
 
-// ── POST create campaign ──────────────────────────────────────────────────────
+
 router.post("/", requireAuth, async (req, res) => {
   try {
     const { title, description, target, startDate, endDate, status, sponsor, department } = req.body;
@@ -79,8 +79,8 @@ router.post("/", requireAuth, async (req, res) => {
         title,
         description  || null,
         Number(target || 0),
-        toDateOnly(startDate),   // ← safe null
-        toDateOnly(endDate),     // ← FIXED: was passing undefined directly
+        toDateOnly(startDate),   
+        toDateOnly(endDate),     
         status       || "Active",
         sponsor      || null,
         department   || null,
@@ -95,7 +95,7 @@ router.post("/", requireAuth, async (req, res) => {
   }
 });
 
-// ── PUT update campaign ───────────────────────────────────────────────────────
+
 router.put("/:id", requireAuth, async (req, res) => {
   try {
     const { title, description, target, startDate, endDate, status, sponsor, department } = req.body;
@@ -108,8 +108,8 @@ router.put("/:id", requireAuth, async (req, res) => {
         title,
         description  || null,
         Number(target || 0),
-        toDateOnly(startDate),   // ← safe null
-        toDateOnly(endDate),     // ← FIXED: was passing undefined directly
+        toDateOnly(startDate), 
+        toDateOnly(endDate),     
         status       || "Active",
         sponsor      || null,
         department   || null,
@@ -129,7 +129,6 @@ router.put("/:id", requireAuth, async (req, res) => {
   }
 });
 
-// ── DELETE campaign ───────────────────────────────────────────────────────────
 router.delete("/:id", requireAuth, async (req, res) => {
   try {
     const [result] = await pool.query(

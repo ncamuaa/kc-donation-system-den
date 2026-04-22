@@ -30,7 +30,7 @@ const parseAttachments = (val) => {
   }
 };
 
-// ── GET all donors ────────────────────────────────────────────────────────────
+
 router.get('/', async (req, res) => {
   try {
     const [rows] = await db.query(`
@@ -49,7 +49,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// ── POST create donor ─────────────────────────────────────────────────────────
+
 router.post('/', async (req, res) => {
   try {
     const {
@@ -119,7 +119,7 @@ router.post('/', async (req, res) => {
   }
 });
 
-// ── PUT update donor ──────────────────────────────────────────────────────────
+
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -185,7 +185,7 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// ── DELETE donor ──────────────────────────────────────────────────────────────
+
 router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -197,7 +197,7 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-// ── GET history for a donor ───────────────────────────────────────────────────
+
 router.get('/:id/history', async (req, res) => {
   try {
     const { id } = req.params;
@@ -212,7 +212,7 @@ router.get('/:id/history', async (req, res) => {
   }
 });
 
-// ── POST save a history snapshot ──────────────────────────────────────────────
+
 router.post('/:id/history', async (req, res) => {
   try {
     const { id } = req.params;
